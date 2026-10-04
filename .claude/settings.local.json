@@ -7,7 +7,10 @@
       "Bash(npm run lint)",
       "Bash(npm run typecheck:*)",
       "Bash(npx prisma generate)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }
