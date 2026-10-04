@@ -1,0 +1,430 @@
+# GCUOBA Digital Alumni Network
+
+A production-ready professional and social networking platform for Old Boys of Government College Umuahia.
+
+## Product Overview
+
+The GCUOBA Digital Alumni Network is a multi-tenant SaaS platform designed to help Old Boys quickly find, recognize, and reconnect with the people they attended Government College Umuahia with. The platform combines:
+
+- Old Boys directory
+- Social networking
+- Professional networking
+- Set communities
+- House communities
+- Chapters/branches
+- Messaging
+- GCU memories
+- Association communications
+
+## Technology Stack
+
+- **Framework:** Next.js 15 with App Router
+- **Language:** TypeScript (strict mode)
+- **UI:** React 19, Tailwind CSS, shadcn/ui
+- **Database:** PostgreSQL
+- **ORM:** Prisma
+- **Authentication:** Auth.js (NextAuth v5)
+- **Validation:** Zod
+- **Containerization:** Docker
+
+## Architecture
+
+This is a modular monolith built as a multi-tenant SaaS platform from day one. While initially deployed for GCUOBA, the architecture supports multiple schools and alumni associations with strict tenant isolation.
+
+### Key Architectural Principles
+
+1. **Multi-tenant by design** - Every tenant-owned record is scoped to its school/association
+2. **Configurable terminology** - School-specific branding and terms (e.g., "Set", "Old Boy") come from tenant data
+3. **Discovery-first** - Optimized for the core use case: finding schoolmates
+4. **Privacy-conscious** - Granular privacy controls and data protection
+5. **Production-ready** - Built for deployment on Coolify/Docker/Hetzner
+
+## Requirements
+
+- Node.js 20+
+- PostgreSQL 14+
+- npm
+
+## Local Installation
+
+### 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd GCUOBA
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up environment variables
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/gcuoba
+AUTH_SECRET=your-secret-key-minimum-32-characters
+AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Generate a secure AUTH_SECRET:
+
+```bash
+openssl rand -base64 32
+```
+
+### 4. Set up PostgreSQL
+
+Create the database:
+
+```bash
+createdb gcuoba
+```
+
+Or using psql:
+
+```sql
+CREATE DATABASE gcuoba;
+```
+
+### 5. Run Prisma migrations
+
+```bash
+npx prisma migrate dev
+```
+
+This will:
+- Create the database schema
+- Generate the Prisma Client
+
+### 6. (Optional) Seed the database
+
+```bash
+npx prisma db seed
+```
+
+This creates:
+- GCUOBA tenant
+- Sample Sets, Houses, Chapters
+- Test Old Boys accounts
+- Admin account
+
+### 7. Start the development server
+
+```bash
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000)
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Run TypeScript type checking
+
+### Prisma Commands
+
+- `npx prisma studio` - Open Prisma Studio (database GUI)
+- `npx prisma migrate dev` - Create and apply migrations
+- `npx prisma migrate deploy` - Apply migrations (production)
+- `npx prisma generate` - Generate Prisma Client
+- `npx prisma db seed` - Seed the database
+
+## Database Schema
+
+The schema includes comprehensive models for:
+
+### Multi-tenant Core
+- School, SchoolDomain, SchoolAdministrator
+
+### Users & Authentication
+- User, AlumniProfile
+
+### School Structure
+- SchoolAttendance, AcademicYear, Cohort (Set), House, ClassGroup, Chapter
+
+### Professional
+- Employment, Education, Skill
+
+### Social
+- Connection, Follow, Post, Reaction, Comment
+
+### Messaging
+- Conversation, ConversationParticipant, Message
+
+### Admin
+- VerificationRequest, Notification, Invitation, Report, AuditLog, PrivacySetting
+
+## Docker
+
+### Build the Docker image
+
+```bash
+docker build -t gcuoba-alumni-network .
+```
+
+### Run with Docker Compose
+
+Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gcuoba
+      POSTGRES_PASSWORD: your-password
+      POSTGRES_DB: gcuoba
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://gcuoba:your-password@db:5432/gcuoba
+      AUTH_SECRET: your-secret-key
+      AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+```
+
+Run:
+
+```bash
+docker-compose up
+```
+
+## Production Deployment
+
+### Deployment Workflow
+
+```
+Local development → Git → GitHub → Coolify → Docker → Hetzner CX33
+```
+
+### Production Server Specs
+
+- **Platform:** Hetzner CX33
+- **CPU:** 4 vCPU (x86_64)
+- **RAM:** 8 GB
+- **Storage:** 80 GB SSD
+- **OS:** Ubuntu
+- **Orchestration:** Coolify
+
+### Coolify Deployment
+
+1. **Set up PostgreSQL resource in Coolify**
+   - Create a persistent PostgreSQL database
+   - Note the connection string
+
+2. **Configure environment variables in Coolify**
+   - DATABASE_URL
+   - AUTH_SECRET (generate with `openssl rand -base64 32`)
+   - AUTH_URL
+   - NEXT_PUBLIC_APP_URL
+   - S3 credentials (if using object storage)
+   - SMTP credentials (if using email)
+
+3. **Connect GitHub repository**
+   - Set branch: `main`
+   - Coolify will auto-deploy on push
+
+4. **Build and deployment process**
+   - Git push triggers build
+   - Docker image builds
+   - Prisma migrations run (`npx prisma migrate deploy`)
+   - Health check runs (`/api/health`)
+   - New version deploys with zero downtime
+
+### Production Checklist
+
+Before deploying to production:
+
+- [ ] `npm run lint` passes
+- [ ] `npm run typecheck` passes
+- [ ] `npm run build` succeeds
+- [ ] All tests pass
+- [ ] Environment variables configured
+- [ ] AUTH_SECRET is strong and unique
+- [ ] DATABASE_URL points to production database
+- [ ] S3 bucket configured for file storage
+- [ ] SMTP configured for emails
+
+### Database Migrations
+
+**Development:**
+```bash
+npx prisma migrate dev
+```
+
+**Production:**
+```bash
+npx prisma migrate deploy
+```
+
+Never use `prisma db push` in production.
+
+### Health Check
+
+The application exposes a health endpoint at `/api/health` that checks:
+- Application status
+- Database connectivity
+
+Coolify uses this for health checks during deployment.
+
+### Logs
+
+All application logs go to stdout/stderr for Coolify to capture.
+
+View logs in Coolify dashboard or via:
+
+```bash
+docker logs <container-id>
+```
+
+## Database Backups
+
+### Automated Backups (Recommended)
+
+Configure in Coolify or set up pg_dump cron:
+
+```bash
+0 2 * * * pg_dump -h localhost -U gcuoba gcuoba > /backups/gcuoba_$(date +\%Y\%m\%d).sql
+```
+
+### Manual Backup
+
+```bash
+pg_dump -h localhost -U gcuoba gcuoba > backup.sql
+```
+
+### Restore
+
+```bash
+psql -h localhost -U gcuoba gcuoba < backup.sql
+```
+
+## Rollback
+
+If a deployment fails:
+
+1. Coolify automatically keeps previous containers
+2. Use Coolify dashboard to rollback
+3. Or manually: `docker tag gcuoba:previous gcuoba:latest`
+
+## Troubleshooting
+
+### Build fails
+
+- Check `npm run build` locally first
+- Ensure all TypeScript errors are resolved
+- Verify environment variables are set
+
+### Database connection fails
+
+- Verify DATABASE_URL is correct
+- Check PostgreSQL is running
+- Ensure network connectivity between containers
+
+### Prisma Client errors
+
+```bash
+npx prisma generate
+```
+
+### Auth not working
+
+- Verify AUTH_SECRET is set and at least 32 characters
+- Check AUTH_URL matches your domain
+- Ensure cookies are not blocked
+
+## Implementation Phases
+
+### Phase 1 - Foundation ✅
+- Next.js, TypeScript, Tailwind, shadcn/ui
+- Prisma, PostgreSQL
+- Auth foundation
+- Docker
+- Environment configuration
+- Health endpoint
+- Base layouts
+- GCUOBA landing page
+
+### Phase 2 - Database (Next)
+- Tenant architecture
+- GCUOBA tenant seed
+- Users/profiles
+- Attendance model
+- Sets, Houses, Classes, Chapters
+- Migrations and seed data
+
+### Phase 3 - Authentication
+- Registration, login, logout
+- Email verification
+- Password reset
+- Session management
+
+### Phase 4 - Onboarding
+- Multi-step wizard
+- GCU history input
+- Professional profile
+- Chapter selection
+- Privacy settings
+
+### Phase 5 - Directory
+- GCUOBA Directory
+- Search and filters
+- Pagination
+
+### Phase 6 - Find My Schoolmates
+- Attendance overlap algorithm
+- Match ranking
+- Unit tests
+
+### Phase 7 - Profiles and Connections
+
+### Phase 8 - Feed
+
+### Phase 9 - Messaging and Notifications
+
+### Phase 10 - Verification, Admin, Privacy, Audit
+
+## Contributing
+
+1. Create a feature branch
+2. Make changes
+3. Run tests and linting
+4. Build successfully
+5. Create pull request to `main`
+
+## License
+
+Proprietary - Government College Umuahia Old Boys Association
+
+## Support
+
+For issues and questions, contact the GCUOBA technical team.

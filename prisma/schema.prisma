@@ -1,0 +1,658 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MULTI-TENANT CORE MODELS
+// ============================================
+
+model School {
+  id              String   @id @default(cuid())
+  name            String
+  shortName       String   @unique
+  description     String?
+  domain          String?  @unique
+  logoUrl         String?
+  bannerUrl       String?
+  primaryColor    String?
+  secondaryColor  String?
+  terminology     Json? // Store tenant-specific terminology
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  domains           SchoolDomain[]
+  administrators    SchoolAdministrator[]
+  users             User[]
+  alumniProfiles    AlumniProfile[]
+  academicYears     AcademicYear[]
+  cohorts           Cohort[]
+  houses            House[]
+  classGroups       ClassGroup[]
+  chapters          Chapter[]
+  posts             Post[]
+  verifications     VerificationRequest[]
+  invitations       Invitation[]
+  auditLogs         AuditLog[]
+
+  @@index([shortName])
+  @@index([isActive])
+}
+
+model SchoolDomain {
+  id        String   @id @default(cuid())
+  schoolId  String
+  domain    String   @unique
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([domain])
+}
+
+model SchoolAdministrator {
+  id        String   @id @default(cuid())
+  schoolId  String
+  userId    String
+  role      AdminRole @default(SCHOOL_ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, userId])
+  @@index([schoolId])
+  @@index([userId])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  NATIONAL_ADMIN
+  SCHOOL_ADMIN
+  CHAPTER_ADMIN
+  SET_ADMIN
+  MODERATOR
+  MEMBER
+}
+
+// ============================================
+// USER AND AUTHENTICATION
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  schoolId          String
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String
+  firstName         String
+  middleName        String?
+  surname           String
+  formerSurname     String?
+  nickname          String?
+  profilePhotoUrl   String?
+  coverPhotoUrl     String?
+  role              AdminRole @default(MEMBER)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  school              School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  alumniProfile       AlumniProfile?
+  schoolAdministrator SchoolAdministrator[]
+  connectionsFrom     Connection[]          @relation("ConnectionFrom")
+  connectionsTo       Connection[]          @relation("ConnectionTo")
+  follows             Follow[]              @relation("UserFollows")
+  followedBy          Follow[]              @relation("UserFollowedBy")
+  posts               Post[]
+  reactions           Reaction[]
+  comments            Comment[]
+  conversationParticipants ConversationParticipant[]
+  messages            Message[]
+  sentInvitations     Invitation[]
+  notifications       Notification[]        @relation("NotificationRecipient")
+  triggeredNotifications Notification[]     @relation("NotificationActor")
+  reports             Report[]
+  privacySettings     PrivacySetting[]
+
+  @@index([schoolId])
+  @@index([email])
+  @@index([schoolId, isActive])
+}
+
+model AlumniProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  schoolId            String
+  biography           String?
+  currentCity         String?
+  currentCountry      String?
+  profession          String?
+  jobTitle            String?
+  company             String?
+  industry            String?
+  professionalInterests String?
+  verificationStatus  VerificationStatus @default(UNVERIFIED)
+  verifiedAt          DateTime?
+  verifiedBy          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendance  SchoolAttendance[]
+  employments       Employment[]
+  educations        Education[]
+  skills            Skill[]
+  chapterMemberships ChapterMember[]
+  verificationRequests VerificationRequest[]
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([verificationStatus])
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// ============================================
+// SCHOOL ATTENDANCE & STRUCTURE
+// ============================================
+
+model SchoolAttendance {
+  id              String   @id @default(cuid())
+  alumniProfileId String
+  schoolId        String
+  entryYear       Int
+  leavingYear     Int
+  cohortId        String?
+  houseId         String?
+  classGroupId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+  cohort        Cohort?       @relation(fields: [cohortId], references: [id])
+  house         House?        @relation(fields: [houseId], references: [id])
+  classGroup    ClassGroup?   @relation(fields: [classGroupId], references: [id])
+
+  @@index([alumniProfileId])
+  @@index([schoolId])
+  @@index([cohortId])
+  @@index([houseId])
+  @@index([entryYear, leavingYear])
+}
+
+model AcademicYear {
+  id        String   @id @default(cuid())
+  schoolId  String
+  year      Int
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, year])
+  @@index([schoolId])
+}
+
+model Cohort {
+  id          String   @id @default(cuid())
+  schoolId    String
+  year        Int
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendances SchoolAttendance[]
+  posts             Post[]
+
+  @@unique([schoolId, year])
+  @@index([schoolId])
+}
+
+model House {
+  id          String   @id @default(cuid())
+  schoolId    String
+  name        String
+  description String?
+  color       String?
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendances SchoolAttendance[]
+  posts             Post[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model ClassGroup {
+  id          String   @id @default(cuid())
+  schoolId    String
+  name        String
+  year        Int?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendances SchoolAttendance[]
+
+  @@index([schoolId])
+}
+
+// ============================================
+// CHAPTERS
+// ============================================
+
+model Chapter {
+  id          String   @id @default(cuid())
+  schoolId    String
+  name        String
+  country     String?
+  region      String?
+  city        String?
+  description String?
+  contactInfo String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school  School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  members ChapterMember[]
+  posts   Post[]
+
+  @@index([schoolId])
+  @@index([country])
+  @@index([city])
+}
+
+model ChapterMember {
+  id              String   @id @default(cuid())
+  chapterId       String
+  alumniProfileId String
+  role            String?
+  joinedAt        DateTime @default(now())
+
+  chapter       Chapter       @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, alumniProfileId])
+  @@index([chapterId])
+  @@index([alumniProfileId])
+}
+
+// ============================================
+// PROFESSIONAL INFORMATION
+// ============================================
+
+model Employment {
+  id              String   @id @default(cuid())
+  alumniProfileId String
+  company         String
+  jobTitle        String
+  industry        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  isCurrent       Boolean  @default(false)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@index([alumniProfileId])
+}
+
+model Education {
+  id              String   @id @default(cuid())
+  alumniProfileId String
+  institution     String
+  degree          String?
+  fieldOfStudy    String?
+  startYear       Int?
+  endYear         Int?
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@index([alumniProfileId])
+}
+
+model Skill {
+  id              String   @id @default(cuid())
+  alumniProfileId String
+  name            String
+  createdAt       DateTime @default(now())
+
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([alumniProfileId, name])
+  @@index([alumniProfileId])
+}
+
+// ============================================
+// CONNECTIONS AND SOCIAL
+// ============================================
+
+model Connection {
+  id          String           @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  fromUser User @relation("ConnectionFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ConnectionTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// ============================================
+// POSTS AND FEED
+// ============================================
+
+model Post {
+  id        String   @id @default(cuid())
+  schoolId  String
+  authorId  String
+  content   String
+  cohortId  String?
+  houseId   String?
+  chapterId String?
+  isOfficial Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  cohort    Cohort?     @relation(fields: [cohortId], references: [id])
+  house     House?      @relation(fields: [houseId], references: [id])
+  chapter   Chapter?    @relation(fields: [chapterId], references: [id])
+  media     PostMedia[]
+  reactions Reaction[]
+  comments  Comment[]
+  reports   Report[]
+
+  @@index([schoolId])
+  @@index([authorId])
+  @@index([cohortId])
+  @@index([houseId])
+  @@index([chapterId])
+  @@index([createdAt])
+}
+
+model PostMedia {
+  id        String   @id @default(cuid())
+  postId    String
+  url       String
+  type      String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  type      String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// ============================================
+// VERIFICATION
+// ============================================
+
+model VerificationRequest {
+  id              String             @id @default(cuid())
+  schoolId        String
+  alumniProfileId String
+  status          VerificationStatus @default(PENDING)
+  evidence        String?
+  internalNotes   String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([alumniProfileId])
+  @@index([status])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  actorId    String?
+  type       String
+  content    String
+  link       String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id])
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================
+// INVITATIONS
+// ============================================
+
+model Invitation {
+  id         String   @id @default(cuid())
+  schoolId   String
+  senderId   String
+  email      String?
+  inviteCode String   @unique
+  used       Boolean  @default(false)
+  usedAt     DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([senderId])
+  @@index([inviteCode])
+}
+
+// ============================================
+// REPORTS AND MODERATION
+// ============================================
+
+model Report {
+  id         String   @id @default(cuid())
+  postId     String?
+  reporterId String
+  reason     String
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+
+  post     Post? @relation(fields: [postId], references: [id])
+  reporter User  @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([reporterId])
+  @@index([status])
+}
+
+// ============================================
+// AUDIT LOGS
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  schoolId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ============================================
+// PRIVACY SETTINGS
+// ============================================
+
+model PrivacySetting {
+  id         String           @id @default(cuid())
+  userId     String
+  field      String
+  visibility VisibilityLevel @default(OLD_BOYS_ONLY)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, field])
+  @@index([userId])
+}
+
+enum VisibilityLevel {
+  PUBLIC
+  OLD_BOYS_ONLY
+  CONNECTIONS_ONLY
+  PRIVATE
+}
