@@ -186,7 +186,7 @@ export default function LandingPage() {
 
                   <div className="w-full text-left">
                     <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Old Boy's Name
+                      Old Boy&apos;s Name
                     </div>
                     <input
                       type="text"
