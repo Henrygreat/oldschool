@@ -10,7 +10,8 @@
       "Bash(npm run build:*)",
       "Bash(npm audit:*)",
       "Bash(npm view:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(npm ci)"
     ]
   }
 }
