@@ -161,6 +161,23 @@ access disabled. Apply the additive migration
 feature. Existing HTTPS avatar URLs continue to display until replaced or
 removed.
 
+### Connections and alumni network
+
+`/network` provides paginated connections, received and sent requests, following,
+and followers, with counts, networking notifications, and bounded suggestions
+based on shared sets, houses, chapters, visible location, and professional
+interests. Connection and follow controls are also available on member profiles
+and directory cards. All mutations use the authenticated member and verify that
+the target is active in the same school; private profile fields continue to use
+the existing privacy settings.
+
+The existing `Connection`, `Follow`, and `Notification` models are reused, so
+this feature does not require a database migration or new environment
+variables. Directed duplicate requests and follows are guarded by their
+existing unique constraints. Requests for either direction of the same member
+pair are serialized with a PostgreSQL transaction-level advisory lock, so two
+members cannot create simultaneous independent requests.
+
 ### Applying the Phase 2 migration
 
 The additive PostgreSQL migration is in
@@ -186,8 +203,8 @@ production.
 Email, phone, city/country, employer, and LinkedIn visibility are enforced
 server-side. Unset preferences default to members-only; existing
 `OLD_BOYS_ONLY` preferences continue to mean members-only. The older
-`CONNECTIONS_ONLY` level remains owner/admin-only until connection access is
-implemented.
+`CONNECTIONS_ONLY` level remains owner/admin-only; accepted networking
+connections do not override field privacy.
 
 ## Database Schema
 

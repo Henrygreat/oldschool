@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { ArrowRight, MapPin } from 'lucide-react'
 import { Avatar } from '@/components/members/avatar'
+import { NetworkControls } from '@/components/members/network-controls'
+import type { ConnectionState } from '@/lib/network-types'
 
 export type DirectoryCardMember = {
   id: string
@@ -10,8 +12,15 @@ export type DirectoryCardMember = {
   setName: string | null
   profession: string | null
   company: string | null
+  jobTitle?: string | null
   location: string | null
   verified: boolean
+  houseName?: string | null
+  matchReason?: string | null
+  connectionState?: ConnectionState
+  isFollowing?: boolean
+  showFollow?: boolean
+  viewerId?: string
 }
 
 export function MemberCard({ member }: { member: DirectoryCardMember }) {
@@ -30,9 +39,23 @@ export function MemberCard({ member }: { member: DirectoryCardMember }) {
       </div>
       <div className="mt-5 flex-1 space-y-2 text-sm text-slate-600">
         {member.profession && <p>{member.profession}</p>}
+        {member.jobTitle && <p>{member.jobTitle}</p>}
         {member.company && <p>{member.company}</p>}
         {member.location && <p className="flex items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0" />{member.location}</p>}
+        {member.houseName && <p>{member.houseName} House</p>}
+        {member.matchReason && <p className="font-medium text-[#9C0621]">{member.matchReason}</p>}
       </div>
+      {member.connectionState && member.viewerId !== member.id && (
+        <div className="mt-4">
+          <NetworkControls
+            compact
+            initialConnectionState={member.connectionState}
+            initialFollowing={member.isFollowing}
+            showFollow={member.showFollow}
+            targetUserId={member.id}
+          />
+        </div>
+      )}
       <Link className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#9C0621] hover:underline" href={`/members/${member.id}`}>
         View profile <ArrowRight className="h-4 w-4" />
       </Link>

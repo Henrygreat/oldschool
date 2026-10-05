@@ -19,6 +19,7 @@ export function MemberNav({ name }: { name: string }) {
         <nav aria-label="Member navigation" className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-sm">
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/dashboard">Dashboard</Link>
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/directory">Directory</Link>
+          {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/network">My Network</Link>}
           {name ? (
             <>
               <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/members/me">{name}</Link>

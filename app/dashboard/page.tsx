@@ -124,6 +124,7 @@ export default async function DashboardPage() {
           <p className="text-sm font-bold uppercase tracking-wider text-slate-500">Quick actions</p>
           <div className="mt-4 space-y-2">
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/directory"><span className="flex items-center gap-3"><Search className="h-5 w-5 text-[#9C0621]" />Find Old Boys</span><ArrowRight className="h-4 w-4" /></Link>
+            <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/network"><span className="flex items-center gap-3"><UserRound className="h-5 w-5 text-[#9C0621]" />My Network</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/profile/edit"><span className="flex items-center gap-3"><UserRound className="h-5 w-5 text-[#9C0621]" />Edit profile</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href={`/members/${user.id}`}><span>View my profile</span><ArrowRight className="h-4 w-4" /></Link>
           </div>

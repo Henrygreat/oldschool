@@ -1,7 +1,8 @@
-import { Prisma, VisibilityLevel } from '@prisma/client'
+import { ConnectionStatus, Prisma, VisibilityLevel } from '@prisma/client'
 import { canViewField, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 import type { DirectoryCardMember } from '@/components/members/member-card'
+import type { ConnectionState } from '@/lib/network-types'
 
 export const DIRECTORY_PAGE_SIZE = 12
 
@@ -54,7 +55,7 @@ export function parseDirectoryFilters(params: Record<string, string | string[] |
   }
 }
 
-function visibleProfileFilter(field: string, predicate: Prisma.AlumniProfileWhereInput): Prisma.UserWhereInput {
+export function visibleProfileFilter(field: string, predicate: Prisma.AlumniProfileWhereInput): Prisma.UserWhereInput {
   const memberVisibleLevels = [
     VisibilityLevel.PUBLIC,
     VisibilityLevel.MEMBERS_ONLY,
@@ -222,7 +223,50 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
         ? [profile?.currentCity, profile?.currentCountry].filter(Boolean).join(', ') || null
         : null,
       verified: profile?.verificationStatus === 'VERIFIED',
+      viewerId,
     }
   })
+
+  if (users.length) {
+    const memberIds = users.map((user) => user.id).filter((id) => id !== viewerId)
+    const [connections, follows] = await Promise.all([
+      memberIds.length
+        ? prisma.connection.findMany({
+            where: {
+              OR: [
+                { fromUserId: viewerId, toUserId: { in: memberIds } },
+                { toUserId: viewerId, fromUserId: { in: memberIds } },
+              ],
+            },
+            select: { fromUserId: true, toUserId: true, status: true },
+          })
+        : Promise.resolve([]),
+      memberIds.length
+        ? prisma.follow.findMany({
+            where: { followerId: viewerId, followingId: { in: memberIds } },
+            select: { followingId: true },
+          })
+        : Promise.resolve([]),
+    ])
+    const following = new Set(follows.map((follow) => follow.followingId))
+    for (const member of members) {
+      if (member.id === viewerId) continue
+      const pair = connections.filter(
+        (connection) => connection.fromUserId === member.id || connection.toUserId === member.id
+      )
+      let state: ConnectionState = 'none'
+      if (pair.some((connection) => connection.status === ConnectionStatus.ACCEPTED)) {
+        state = 'connected'
+      } else if (pair.some((connection) => connection.status === ConnectionStatus.BLOCKED)) {
+        state = 'unavailable'
+      } else if (pair.some((connection) => connection.status === ConnectionStatus.PENDING)) {
+        state = pair.some((connection) => connection.fromUserId === viewerId)
+          ? 'sent'
+          : 'received'
+      }
+      member.connectionState = state
+      member.isFollowing = following.has(member.id)
+    }
+  }
   return { members, total, houses, cohorts, pages, page }
 }

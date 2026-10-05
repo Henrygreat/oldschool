@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { ConnectionStatus } from '@prisma/client'
 import { ArrowLeft, BriefcaseBusiness, ExternalLink, GraduationCap, MapPin, Pencil, ShieldCheck } from 'lucide-react'
 import { Avatar } from '@/components/members/avatar'
 import { MemberPageLayout } from '@/components/members/member-nav'
+import { NetworkControls } from '@/components/members/network-controls'
 import { auth } from '@/lib/auth'
 import { canViewField, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
+import type { ConnectionState } from '@/lib/network-types'
 
 function safeExternalUrl(value: string | null | undefined) {
   if (!value) return null
@@ -75,6 +78,39 @@ export default async function MemberProfilePage({
 
   const isOwner = session?.user?.id === member.id
   const isMember = Boolean(session?.user?.id && session.user.schoolId === member.schoolId)
+  let connectionState: ConnectionState = 'none'
+  let isFollowing = false
+  if (isMember && !isOwner && session?.user?.id) {
+    const [connections, follow] = await Promise.all([
+      prisma.connection.findMany({
+        where: {
+          OR: [
+            { fromUserId: session.user.id, toUserId: member.id },
+            { fromUserId: member.id, toUserId: session.user.id },
+          ],
+        },
+        select: { fromUserId: true, status: true },
+      }),
+      prisma.follow.findFirst({
+        where: { followerId: session.user.id, followingId: member.id },
+        select: { id: true },
+      }),
+    ])
+    if (connections.some((connection) => connection.status === ConnectionStatus.ACCEPTED)) {
+      connectionState = 'connected'
+    } else if (connections.some((connection) => connection.status === ConnectionStatus.BLOCKED)) {
+      connectionState = 'unavailable'
+    } else if (connections.some((connection) => connection.status === ConnectionStatus.PENDING)) {
+      connectionState = connections.some(
+        (connection) =>
+          connection.fromUserId === session.user.id &&
+          connection.status === ConnectionStatus.PENDING
+      )
+        ? 'sent'
+        : 'received'
+    }
+    isFollowing = Boolean(follow)
+  }
   let isAdmin = false
   if (session?.user?.id && isMember && !isOwner) {
     const [viewer, schoolAdmin] = await Promise.all([
@@ -131,6 +167,11 @@ export default async function MemberProfilePage({
             </div>
           </div>
           {isOwner && <Link className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C0621] px-4 py-3 text-sm font-bold text-white hover:bg-[#80051b]" href="/profile/edit"><Pencil className="h-4 w-4" /> Edit profile</Link>}
+          {isMember && !isOwner && <NetworkControls
+            initialConnectionState={connectionState}
+            initialFollowing={isFollowing}
+            targetUserId={member.id}
+          />}
         </div>
       </section>
 
