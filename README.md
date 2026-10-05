@@ -107,17 +107,13 @@ This will:
 - Create the database schema
 - Generate the Prisma Client
 
-### 6. (Optional) Seed the database
+### 6. Seed the GCUOBA tenant
 
 ```bash
 npx prisma db seed
 ```
 
-This creates:
-- GCUOBA tenant
-- Sample Sets, Houses, Chapters
-- Test Old Boys accounts
-- Admin account
+This creates or reuses the GCUOBA tenant only. It does not create sample members or test accounts.
 
 ### 7. Start the development server
 
@@ -143,7 +139,48 @@ Visit [http://localhost:3000](http://localhost:3000)
 - `npx prisma migrate dev` - Create and apply migrations
 - `npx prisma migrate deploy` - Apply migrations (production)
 - `npx prisma generate` - Generate Prisma Client
-- `npx prisma db seed` - Seed the database
+- `npx prisma db seed` - Create or reuse the GCUOBA tenant
+
+### Member profiles and directory
+
+Member routes include `/dashboard`, `/directory`, `/profile/edit`, and
+`/members/[id]`. Members edit their own profile using a five-step editor.
+Directory filtering and pagination run through Prisma on the server. The
+existing User, AlumniProfile, SchoolAttendance, Cohort, House, and
+PrivacySetting models are reused; profile completion is calculated from
+saved fields rather than stored redundantly.
+
+Profile photos use the existing avatar URL when present and otherwise show
+initials. Local file uploads are not enabled; configure object storage before
+adding production image uploads.
+
+### Applying the Phase 2 migration
+
+The additive PostgreSQL migration is in
+`prisma/migrations/20261005090000_add_members_only_visibility` and
+`prisma/migrations/20261005090100_phase2_member_profiles`. It adds optional
+contact and student-number columns, permits incomplete attendance years,
+adds a privacy level and a directory ordering index, and preserves all existing rows.
+
+Apply the migration against the production database before deploying code
+that uses the new fields:
+
+```bash
+npx prisma migrate deploy
+npx prisma db seed
+```
+
+Configure `DATABASE_URL` for that environment before running either command.
+The seed only creates or reuses the GCUOBA School record; it does not add
+sample alumni. Registration remains unavailable until that tenant record
+exists. Do not run `prisma migrate reset` or `prisma db push` against
+production.
+
+Email, phone, city/country, employer, and LinkedIn visibility are enforced
+server-side. Unset preferences default to members-only; existing
+`OLD_BOYS_ONLY` preferences continue to mean members-only. The older
+`CONNECTIONS_ONLY` level remains owner/admin-only until connection access is
+implemented.
 
 ## Database Schema
 
@@ -374,40 +411,17 @@ npx prisma generate
 - Base layouts
 - GCUOBA landing page
 
-### Phase 2 - Database (Next)
-- Tenant architecture
-- GCUOBA tenant seed
-- Users/profiles
-- Attendance model
-- Sets, Houses, Classes, Chapters
-- Migrations and seed data
+### Phase 2 - Member profiles and directory
+- Member registration, login, and logout
+- Five-step profile editor and completion indicator
+- Privacy-aware member profiles and directory
+- Server-side search, filters, and pagination
 
-### Phase 3 - Authentication
-- Registration, login, logout
-- Email verification
-- Password reset
-- Session management
-
-### Phase 4 - Onboarding
-- Multi-step wizard
-- GCU history input
-- Professional profile
-- Chapter selection
-- Privacy settings
-
-### Phase 5 - Directory
-- GCUOBA Directory
-- Search and filters
-- Pagination
-
-### Phase 6 - Find My Schoolmates
+### Future phases
+- Find My Schoolmates
 - Attendance overlap algorithm
 - Match ranking
 - Unit tests
-
-### Phase 7 - Profiles and Connections
-
-### Phase 8 - Feed
 
 ### Phase 9 - Messaging and Notifications
 

@@ -15,33 +15,33 @@ datasource db {
 // ============================================
 
 model School {
-  id              String   @id @default(cuid())
-  name            String
-  shortName       String   @unique
-  description     String?
-  domain          String?  @unique
-  logoUrl         String?
-  bannerUrl       String?
-  primaryColor    String?
-  secondaryColor  String?
-  terminology     Json? // Store tenant-specific terminology
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  shortName      String   @unique
+  description    String?
+  domain         String?  @unique
+  logoUrl        String?
+  bannerUrl      String?
+  primaryColor   String?
+  secondaryColor String?
+  terminology    Json? // Store tenant-specific terminology
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  domains           SchoolDomain[]
-  administrators    SchoolAdministrator[]
-  users             User[]
-  alumniProfiles    AlumniProfile[]
-  academicYears     AcademicYear[]
-  cohorts           Cohort[]
-  houses            House[]
-  classGroups       ClassGroup[]
-  chapters          Chapter[]
-  posts             Post[]
-  verifications     VerificationRequest[]
-  invitations       Invitation[]
-  auditLogs         AuditLog[]
+  domains        SchoolDomain[]
+  administrators SchoolAdministrator[]
+  users          User[]
+  alumniProfiles AlumniProfile[]
+  academicYears  AcademicYear[]
+  cohorts        Cohort[]
+  houses         House[]
+  classGroups    ClassGroup[]
+  chapters       Chapter[]
+  posts          Post[]
+  verifications  VerificationRequest[]
+  invitations    Invitation[]
+  auditLogs      AuditLog[]
 
   @@index([shortName])
   @@index([isActive])
@@ -61,12 +61,12 @@ model SchoolDomain {
 }
 
 model SchoolAdministrator {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   schoolId  String
   userId    String
   role      AdminRole @default(SCHOOL_ADMIN)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -91,72 +91,76 @@ enum AdminRole {
 // ============================================
 
 model User {
-  id                String    @id @default(cuid())
-  schoolId          String
-  email             String    @unique
-  emailVerified     DateTime?
-  password          String
-  firstName         String
-  middleName        String?
-  surname           String
-  formerSurname     String?
-  nickname          String?
-  profilePhotoUrl   String?
-  coverPhotoUrl     String?
-  role              AdminRole @default(MEMBER)
-  isActive          Boolean   @default(true)
-  lastLoginAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  schoolId        String
+  email           String    @unique
+  emailVerified   DateTime?
+  password        String
+  firstName       String
+  middleName      String?
+  surname         String
+  formerSurname   String?
+  nickname        String?
+  profilePhotoUrl String?
+  coverPhotoUrl   String?
+  role            AdminRole @default(MEMBER)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  school              School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  alumniProfile       AlumniProfile?
-  schoolAdministrator SchoolAdministrator[]
-  connectionsFrom     Connection[]          @relation("ConnectionFrom")
-  connectionsTo       Connection[]          @relation("ConnectionTo")
-  follows             Follow[]              @relation("UserFollows")
-  followedBy          Follow[]              @relation("UserFollowedBy")
-  posts               Post[]
-  reactions           Reaction[]
-  comments            Comment[]
+  school                   School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  alumniProfile            AlumniProfile?
+  schoolAdministrator      SchoolAdministrator[]
+  connectionsFrom          Connection[]              @relation("ConnectionFrom")
+  connectionsTo            Connection[]              @relation("ConnectionTo")
+  follows                  Follow[]                  @relation("UserFollows")
+  followedBy               Follow[]                  @relation("UserFollowedBy")
+  posts                    Post[]
+  reactions                Reaction[]
+  comments                 Comment[]
   conversationParticipants ConversationParticipant[]
-  messages            Message[]
-  sentInvitations     Invitation[]
-  notifications       Notification[]        @relation("NotificationRecipient")
-  triggeredNotifications Notification[]     @relation("NotificationActor")
-  reports             Report[]
-  privacySettings     PrivacySetting[]
+  messages                 Message[]
+  sentInvitations          Invitation[]
+  notifications            Notification[]            @relation("NotificationRecipient")
+  triggeredNotifications   Notification[]            @relation("NotificationActor")
+  reports                  Report[]
+  privacySettings          PrivacySetting[]
 
   @@index([schoolId])
   @@index([email])
   @@index([schoolId, isActive])
+  @@index([schoolId, isActive, surname, firstName])
 }
 
 model AlumniProfile {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  schoolId            String
-  biography           String?
-  currentCity         String?
-  currentCountry      String?
-  profession          String?
-  jobTitle            String?
-  company             String?
-  industry            String?
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  schoolId              String
+  biography             String?
+  currentCity           String?
+  currentCountry        String?
+  profession            String?
+  jobTitle              String?
+  company               String?
+  industry              String?
+  phone                 String?
+  linkedInUrl           String?
+  websiteUrl            String?
   professionalInterests String?
-  verificationStatus  VerificationStatus @default(UNVERIFIED)
-  verifiedAt          DateTime?
-  verifiedBy          String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  verificationStatus    VerificationStatus @default(UNVERIFIED)
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school            School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  schoolAttendance  SchoolAttendance[]
-  employments       Employment[]
-  educations        Education[]
-  skills            Skill[]
-  chapterMemberships ChapterMember[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendance     SchoolAttendance[]
+  employments          Employment[]
+  educations           Education[]
+  skills               Skill[]
+  chapterMemberships   ChapterMember[]
   verificationRequests VerificationRequest[]
 
   @@index([schoolId])
@@ -179,8 +183,9 @@ model SchoolAttendance {
   id              String   @id @default(cuid())
   alumniProfileId String
   schoolId        String
-  entryYear       Int
-  leavingYear     Int
+  entryYear       Int?
+  leavingYear     Int?
+  studentNumber   String?
   cohortId        String?
   houseId         String?
   classGroupId    String?
@@ -200,13 +205,13 @@ model SchoolAttendance {
 }
 
 model AcademicYear {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   schoolId  String
   year      Int
   name      String
   startDate DateTime?
   endDate   DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
@@ -311,17 +316,17 @@ model ChapterMember {
 // ============================================
 
 model Employment {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   alumniProfileId String
   company         String
   jobTitle        String
   industry        String?
   startDate       DateTime?
   endDate         DateTime?
-  isCurrent       Boolean  @default(false)
+  isCurrent       Boolean   @default(false)
   description     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   alumniProfile AlumniProfile @relation(fields: [alumniProfileId], references: [id], onDelete: Cascade)
 
@@ -362,12 +367,12 @@ model Skill {
 // ============================================
 
 model Connection {
-  id          String           @id @default(cuid())
-  fromUserId  String
-  toUserId    String
-  status      ConnectionStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id         String           @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   fromUser User @relation("ConnectionFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
   toUser   User @relation("ConnectionTo", fields: [toUserId], references: [id], onDelete: Cascade)
@@ -404,16 +409,16 @@ model Follow {
 // ============================================
 
 model Post {
-  id        String   @id @default(cuid())
-  schoolId  String
-  authorId  String
-  content   String
-  cohortId  String?
-  houseId   String?
-  chapterId String?
-  isOfficial Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  schoolId   String
+  authorId   String
+  content    String
+  cohortId   String?
+  houseId    String?
+  chapterId  String?
+  isOfficial Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -491,10 +496,10 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   userId         String
-  joinedAt       DateTime @default(now())
+  joinedAt       DateTime  @default(now())
   lastReadAt     DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -549,14 +554,14 @@ model VerificationRequest {
 // ============================================
 
 model Notification {
-  id         String   @id @default(cuid())
-  userId     String
-  actorId    String?
-  type       String
-  content    String
-  link       String?
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String?
+  type      String
+  content   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor User? @relation("NotificationActor", fields: [actorId], references: [id])
@@ -571,15 +576,15 @@ model Notification {
 // ============================================
 
 model Invitation {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   schoolId   String
   senderId   String
   email      String?
-  inviteCode String   @unique
-  used       Boolean  @default(false)
+  inviteCode String    @unique
+  used       Boolean   @default(false)
   usedAt     DateTime?
   expiresAt  DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -637,12 +642,12 @@ model AuditLog {
 // ============================================
 
 model PrivacySetting {
-  id         String           @id @default(cuid())
+  id         String          @id @default(cuid())
   userId     String
   field      String
-  visibility VisibilityLevel @default(OLD_BOYS_ONLY)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  visibility VisibilityLevel @default(MEMBERS_ONLY)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -652,6 +657,7 @@ model PrivacySetting {
 
 enum VisibilityLevel {
   PUBLIC
+  MEMBERS_ONLY
   OLD_BOYS_ONLY
   CONNECTIONS_ONLY
   PRIVATE
