@@ -1,5 +1,5 @@
 import { Prisma, VisibilityLevel } from '@prisma/client'
-import { canViewField, privacyFor } from '@/lib/profile'
+import { canViewField, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 import type { DirectoryCardMember } from '@/components/members/member-card'
 
@@ -168,6 +168,8 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
         surname: true,
         nickname: true,
         profilePhotoUrl: true,
+        profilePhotoKey: true,
+        updatedAt: true,
         privacySettings: { select: { field: true, visibility: true } },
         alumniProfile: {
           select: {
@@ -205,11 +207,14 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
     const isOwner = user.id === viewerId
     const canSeeLocation = canViewField(privacy.location, true, isOwner, false)
     const canSeeCompany = canViewField(privacy.company, true, isOwner, false)
+    const canSeePhoto = canViewField(privacy.photo, true, isOwner, false)
     return {
       id: user.id,
       name: [user.firstName, user.middleName, user.surname].filter(Boolean).join(' '),
       nickname: user.nickname,
-      photoUrl: user.profilePhotoUrl,
+      photoUrl: canSeePhoto
+        ? memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)
+        : null,
       setName: profile?.schoolAttendance[0]?.cohort?.name ?? null,
       profession: profile?.profession ?? null,
       company: canSeeCompany ? profile?.company ?? null : null,

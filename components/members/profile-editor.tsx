@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ImagePlus, Trash2 } from 'lucide-react'
 import { VisibilityLevel } from '@prisma/client'
 import { Button } from '@/components/ui/button'
+import { Avatar } from '@/components/members/avatar'
 import { saveProfile } from '@/app/profile/actions'
 import type { ProfileInput, PrivacyField } from '@/lib/profile'
 
@@ -57,10 +58,12 @@ export function ProfileEditor({
   initialValues,
   houses,
   userId,
+  initialPhotoUrl,
 }: {
   initialValues: Draft
   houses: HouseOption[]
   userId: string
+  initialPhotoUrl: string | null
 }) {
   const router = useRouter()
   const [values, setValues] = useState(initialValues)
@@ -68,6 +71,16 @@ export function ProfileEditor({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState('')
+  const [photoNotice, setPhotoNotice] = useState('')
+
+  useEffect(() => () => {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -90,6 +103,76 @@ export function ProfileEditor({
       return
     }
     setStep(nextStep)
+  }
+
+  function choosePhoto(file: File | undefined) {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setPhotoError('')
+    setPhotoNotice('')
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setPhotoError('Choose a JPEG, PNG, or WebP image.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Choose an image that is 5 MB or smaller.')
+      return
+    }
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  async function uploadPhoto() {
+    if (!photoFile) return
+    setPhotoBusy(true)
+    setPhotoError('')
+    setPhotoNotice('')
+    try {
+      const form = new FormData()
+      form.set('photo', photoFile)
+      const response = await fetch('/api/profile/photo', { method: 'POST', body: form })
+      const result = await response.json() as { photoUrl?: string; error?: string }
+      if (!response.ok || !result.photoUrl) {
+        setPhotoError(result.error ?? 'The photo could not be saved. Please try again.')
+        return
+      }
+      if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+      setPhotoUrl(result.photoUrl)
+      setPhotoFile(null)
+      setPhotoPreview(null)
+      setPhotoNotice('Your profile photo has been updated.')
+      router.refresh()
+    } catch {
+      setPhotoError('The photo could not be saved. Check your connection and try again.')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoBusy(true)
+    setPhotoError('')
+    setPhotoNotice('')
+    try {
+      const response = await fetch('/api/profile/photo', { method: 'DELETE' })
+      const result = await response.json() as { removed?: boolean; warning?: string; error?: string }
+      if (!response.ok || !result.removed) {
+        setPhotoError(result.error ?? 'The photo could not be removed. Please try again.')
+        return
+      }
+      if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+      setPhotoUrl(null)
+      setPhotoFile(null)
+      setPhotoPreview(null)
+      setPhotoNotice(result.warning ?? 'Your profile photo has been removed.')
+      router.refresh()
+    } catch {
+      setPhotoError('The photo could not be removed. Check your connection and try again.')
+    } finally {
+      setPhotoBusy(false)
+    }
   }
 
   const visibilityField = (field: PrivacyField, label: string) => (
@@ -119,13 +202,45 @@ export function ProfileEditor({
       {step === 0 && (
         <div className="space-y-5">
           <div><p className="text-sm font-bold uppercase tracking-wider text-slate-500">Step 1</p><h2 className="mt-1 text-2xl font-bold">About you</h2><p className="mt-2 text-sm text-slate-600">Your name helps old schoolmates recognise you.</p></div>
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center">
+            <Avatar name={`${values.firstName} ${values.surname}`} photoUrl={photoPreview ?? photoUrl} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-900">Profile photo</p>
+              <p className="mt-1 text-sm text-slate-600">JPEG, PNG, or WebP, up to 5 MB. Your image is securely resized before storage.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <ImagePlus className="h-4 w-4" /> {photoUrl ? 'Choose a new photo' : 'Choose photo'}
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    disabled={photoBusy}
+                    onChange={(event) => choosePhoto(event.currentTarget.files?.[0])}
+                    type="file"
+                  />
+                </label>
+                {photoFile && <Button disabled={photoBusy} onClick={() => void uploadPhoto()} type="button">
+                  {photoBusy ? 'Uploading…' : 'Upload photo'}
+                </Button>}
+                {(photoUrl || photoPreview) && <Button
+                  className="gap-2"
+                  disabled={photoBusy}
+                  onClick={() => void removePhoto()}
+                  type="button"
+                  variant="outline"
+                >
+                  <Trash2 className="h-4 w-4" /> Remove
+                </Button>}
+              </div>
+              {photoError && <p className="mt-2 text-sm text-red-700" role="alert">{photoError}</p>}
+              {photoNotice && <p className="mt-2 text-sm text-emerald-700" role="status">{photoNotice}</p>}
+            </div>
+          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <TextField label="First name" maxLength={80} onChange={(value) => update('firstName', value)} value={values.firstName} />
             <TextField label="Middle name (optional)" maxLength={80} onChange={(value) => update('middleName', value)} value={values.middleName} />
             <TextField label="Last name" maxLength={80} onChange={(value) => update('surname', value)} value={values.surname} />
             <TextField hint="A name your schoolmates know you by." label="Nickname (optional)" maxLength={80} onChange={(value) => update('nickname', value)} value={values.nickname} />
           </div>
-          <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Profile photo uploads will be available when secure object storage is configured. Your profile will use an initials avatar in the meantime.</p>
         </div>
       )}
 
@@ -187,6 +302,7 @@ export function ProfileEditor({
             {visibilityField('location', 'City and country')}
             {visibilityField('company', 'Company / employer')}
             {visibilityField('linkedin', 'LinkedIn profile')}
+            {visibilityField('photo', 'Profile photo')}
           </div>
           <p className="text-sm text-slate-500">Private details are excluded on the server for people who are not allowed to view them. Your password and account credentials are never included in a member profile.</p>
         </div>

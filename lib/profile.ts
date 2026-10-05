@@ -1,7 +1,7 @@
 import { VisibilityLevel, type PrivacySetting } from '@prisma/client'
 import { z } from 'zod'
 
-export const privacyFields = ['email', 'phone', 'location', 'company', 'linkedin'] as const
+export const privacyFields = ['email', 'phone', 'location', 'company', 'linkedin', 'photo'] as const
 export type PrivacyField = (typeof privacyFields)[number]
 
 export const defaultPrivacy = Object.fromEntries(
@@ -29,6 +29,18 @@ export function canViewField(
     (visibility === VisibilityLevel.MEMBERS_ONLY ||
       visibility === VisibilityLevel.OLD_BOYS_ONLY)
   )
+}
+
+export function memberPhotoUrl(
+  userId: string,
+  photoKey: string | null,
+  legacyPhotoUrl: string | null,
+  updatedAt: Date
+) {
+  if (photoKey) {
+    return `/api/media/profile/${encodeURIComponent(userId)}?v=${updatedAt.getTime()}`
+  }
+  return legacyPhotoUrl?.startsWith('https://') ? legacyPhotoUrl : null
 }
 
 const yearSchema = z.preprocess(
@@ -80,6 +92,7 @@ export const profileInputSchema = z
       location: z.nativeEnum(VisibilityLevel),
       company: z.nativeEnum(VisibilityLevel),
       linkedin: z.nativeEnum(VisibilityLevel),
+      photo: z.nativeEnum(VisibilityLevel),
     }),
   })
   .superRefine((profile, context) => {

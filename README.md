@@ -150,9 +150,16 @@ existing User, AlumniProfile, SchoolAttendance, Cohort, House, and
 PrivacySetting models are reused; profile completion is calculated from
 saved fields rather than stored redundantly.
 
-Profile photos use the existing avatar URL when present and otherwise show
-initials. Local file uploads are not enabled; configure object storage before
-adding production image uploads.
+Profile photos are uploaded through an authenticated server endpoint, validated
+and converted to WebP, then stored in a private S3-compatible bucket such as
+Cloudflare R2. The database stores only the object key; the application streams
+images through a same-origin endpoint that checks the owner's photo visibility
+for every request. Configure `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`,
+`S3_ACCESS_KEY`, and `S3_SECRET_KEY` before enabling uploads. Keep public bucket
+access disabled. Apply the additive migration
+`prisma/migrations/20261005140000_profile_photo_key` before deploying this
+feature. Existing HTTPS avatar URLs continue to display until replaced or
+removed.
 
 ### Applying the Phase 2 migration
 

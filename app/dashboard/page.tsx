@@ -6,7 +6,7 @@ import { MemberCard } from '@/components/members/member-card'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { auth } from '@/lib/auth'
 import { searchDirectory } from '@/lib/directory'
-import { profileCompletion } from '@/lib/profile'
+import { memberPhotoUrl, profileCompletion } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 
 export default async function DashboardPage() {
@@ -20,6 +20,8 @@ export default async function DashboardPage() {
       firstName: true,
       surname: true,
       profilePhotoUrl: true,
+      profilePhotoKey: true,
+      updatedAt: true,
       alumniProfile: {
         select: {
           profession: true,
@@ -78,7 +80,7 @@ export default async function DashboardPage() {
       <section className="overflow-hidden rounded-3xl bg-[#16070a] text-white">
         <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex items-center gap-5">
-            <Avatar name={displayName} photoUrl={user.profilePhotoUrl} size="lg" />
+            <Avatar name={displayName} photoUrl={memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)} size="lg" />
             <div>
               <p className="text-sm font-semibold text-white/60">GCUOBA MEMBER DASHBOARD</p>
               <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Welcome back, {user.firstName}.</h1>

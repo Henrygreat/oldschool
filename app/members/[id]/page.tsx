@@ -4,7 +4,7 @@ import { ArrowLeft, BriefcaseBusiness, ExternalLink, GraduationCap, MapPin, Penc
 import { Avatar } from '@/components/members/avatar'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { auth } from '@/lib/auth'
-import { canViewField, privacyFor } from '@/lib/profile'
+import { canViewField, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 
 function safeExternalUrl(value: string | null | undefined) {
@@ -40,6 +40,8 @@ export default async function MemberProfilePage({
       nickname: true,
       email: true,
       profilePhotoUrl: true,
+      profilePhotoKey: true,
+      updatedAt: true,
       privacySettings: { select: { field: true, visibility: true } },
       alumniProfile: {
         select: {
@@ -102,7 +104,11 @@ export default async function MemberProfilePage({
   const canSeeLocation = canViewField(privacy.location, isMember, isOwner, isAdmin)
   const canSeeCompany = canViewField(privacy.company, isMember, isOwner, isAdmin)
   const canSeeLinkedIn = canViewField(privacy.linkedin, isMember, isOwner, isAdmin)
+  const canSeePhoto = canViewField(privacy.photo, isMember, isOwner, isAdmin)
   const name = [member.firstName, member.middleName, member.surname].filter(Boolean).join(' ')
+  const photoUrl = canSeePhoto
+    ? memberPhotoUrl(member.id, member.profilePhotoKey, member.profilePhotoUrl, member.updatedAt)
+    : null
   const linkedInUrl = canSeeLinkedIn ? safeExternalUrl(profile?.linkedInUrl) : null
   const websiteUrl = canSeeLinkedIn ? safeExternalUrl(profile?.websiteUrl) : null
 
@@ -113,7 +119,7 @@ export default async function MemberProfilePage({
         <div className="h-36 bg-gradient-to-r from-[#16070a] via-[#4b101d] to-[#9C0621]" />
         <div className="-mt-14 flex flex-col gap-5 px-6 pb-7 sm:flex-row sm:items-end sm:justify-between sm:px-9">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end">
-            <div className="rounded-full border-4 border-white"><Avatar name={name} photoUrl={member.profilePhotoUrl} size="lg" /></div>
+            <div className="rounded-full border-4 border-white"><Avatar name={name} photoUrl={photoUrl} size="lg" /></div>
             <div className="pb-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-3xl font-bold">{name}</h1>

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { ProfileEditor } from '@/components/members/profile-editor'
 import { auth } from '@/lib/auth'
-import { defaultPrivacy, privacyFor } from '@/lib/profile'
+import { defaultPrivacy, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 
 export default async function EditProfilePage() {
@@ -14,6 +14,9 @@ export default async function EditProfilePage() {
       where: { id: session.user.id, schoolId: session.user.schoolId, isActive: true },
       select: {
         id: true,
+        profilePhotoUrl: true,
+        profilePhotoKey: true,
+        updatedAt: true,
         firstName: true,
         middleName: true,
         surname: true,
@@ -90,7 +93,12 @@ export default async function EditProfilePage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Complete or edit your profile</h1>
           <p className="mt-2 text-slate-600">Your changes are saved as you continue. Fields can be left blank and added later.</p>
         </div>
-        <ProfileEditor houses={houses} initialValues={initialValues} userId={user.id} />
+        <ProfileEditor
+          houses={houses}
+          initialPhotoUrl={memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)}
+          initialValues={initialValues}
+          userId={user.id}
+        />
       </div>
     </MemberPageLayout>
   )

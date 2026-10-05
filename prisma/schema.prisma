@@ -102,6 +102,7 @@ model User {
   formerSurname   String?
   nickname        String?
   profilePhotoUrl String?
+  profilePhotoKey String?
   coverPhotoUrl   String?
   role            AdminRole @default(MEMBER)
   isActive        Boolean   @default(true)
