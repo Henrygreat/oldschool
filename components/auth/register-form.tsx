@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button'
 
 const initialState: FormState = {}
 
-export function RegisterForm() {
+export function RegisterForm({ callbackUrl = '/dashboard' }: { callbackUrl?: string }) {
   const [state, action, pending] = useActionState(registerAction, initialState)
 
   return (
     <form action={action} className="mt-8 space-y-5">
+      <input name="callbackUrl" type="hidden" value={callbackUrl} />
       {state.error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.error}</p>}
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-semibold text-slate-700">
@@ -36,7 +37,7 @@ export function RegisterForm() {
         {pending ? 'Creating account…' : 'Create account'}
       </Button>
       <p className="text-center text-sm text-slate-600">
-        Already a member? <Link className="font-bold text-[#9C0621] hover:underline" href="/auth/login">Log in</Link>
+        Already a member? <Link className="font-bold text-[#9C0621] hover:underline" href={`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Log in</Link>
       </p>
     </form>
   )

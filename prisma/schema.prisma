@@ -29,19 +29,22 @@ model School {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  domains        SchoolDomain[]
-  administrators SchoolAdministrator[]
-  users          User[]
-  alumniProfiles AlumniProfile[]
-  academicYears  AcademicYear[]
-  cohorts        Cohort[]
-  houses         House[]
-  classGroups    ClassGroup[]
-  chapters       Chapter[]
-  posts          Post[]
-  verifications  VerificationRequest[]
-  invitations    Invitation[]
-  auditLogs      AuditLog[]
+  domains              SchoolDomain[]
+  administrators       SchoolAdministrator[]
+  users                User[]
+  alumniProfiles       AlumniProfile[]
+  alumniArchiveRecords AlumniArchiveRecord[]
+  alumniImportBatches  AlumniImportBatch[]
+  alumniClaims         AlumniProfileClaim[]
+  academicYears        AcademicYear[]
+  cohorts              Cohort[]
+  houses               House[]
+  classGroups          ClassGroup[]
+  chapters             Chapter[]
+  posts                Post[]
+  verifications        VerificationRequest[]
+  invitations          Invitation[]
+  auditLogs            AuditLog[]
 
   @@index([shortName])
   @@index([isActive])
@@ -113,6 +116,10 @@ model User {
   school                   School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   alumniProfile            AlumniProfile?
   schoolAdministrator      SchoolAdministrator[]
+  uploadedAlumniImports    AlumniImportBatch[]       @relation("AlumniImportUploader")
+  claimedArchiveRecord     AlumniArchiveRecord?      @relation("ArchiveRecordClaimedBy")
+  alumniProfileClaims      AlumniProfileClaim[]      @relation("AlumniClaimant")
+  reviewedAlumniClaims     AlumniProfileClaim[]      @relation("AlumniClaimReviewer")
   connectionsFrom          Connection[]              @relation("ConnectionFrom")
   connectionsTo            Connection[]              @relation("ConnectionTo")
   follows                  Follow[]                  @relation("UserFollows")
@@ -229,9 +236,10 @@ model Cohort {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  schoolAttendances SchoolAttendance[]
-  posts             Post[]
+  school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolAttendances    SchoolAttendance[]
+  alumniArchiveRecords AlumniArchiveRecord[]
+  posts                Post[]
 
   @@unique([schoolId, year])
   @@index([schoolId])
@@ -403,6 +411,102 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model AlumniImportBatch {
+  id             String   @id @default(cuid())
+  schoolId       String
+  uploadedById   String
+  sourceFilename String
+  contentHash    String
+  totalRows      Int
+  importedCount  Int      @default(0)
+  skippedCount   Int      @default(0)
+  duplicateCount Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  school     School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  uploadedBy User                  @relation("AlumniImportUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  records    AlumniArchiveRecord[]
+
+  @@unique([schoolId, contentHash])
+  @@index([schoolId, createdAt])
+  @@index([uploadedById])
+}
+
+model AlumniArchiveRecord {
+  id              String              @id @default(cuid())
+  schoolId        String
+  importBatchId   String?
+  sourceRowNumber Int?
+  fullName        String
+  firstName       String?
+  middleName      String?
+  surname         String?
+  title           String?
+  setYear         Int
+  cohortId        String?
+  house           String?
+  profession      String?
+  status          ArchiveRecordStatus @default(LIVING)
+  email           String?
+  phone           String?
+  remarks         String?
+  biography       String?
+  photoUrl        String?
+  claimedByUserId String?             @unique
+  claimedAt       DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  school        School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  importBatch   AlumniImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  cohort        Cohort?              @relation(fields: [cohortId], references: [id], onDelete: SetNull)
+  claimedByUser User?                @relation("ArchiveRecordClaimedBy", fields: [claimedByUserId], references: [id], onDelete: SetNull)
+  claims        AlumniProfileClaim[]
+
+  @@unique([importBatchId, sourceRowNumber])
+  @@index([schoolId, setYear, archivedAt])
+  @@index([schoolId, fullName])
+  @@index([schoolId, status])
+  @@index([cohortId])
+}
+
+model AlumniProfileClaim {
+  id              String            @id @default(cuid())
+  archiveRecordId String
+  claimantUserId  String
+  schoolId        String
+  status          AlumniClaimStatus @default(PENDING)
+  claimantMessage String?
+  reviewerUserId  String?
+  reviewerMessage String?
+  reviewedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  archiveRecord AlumniArchiveRecord @relation(fields: [archiveRecordId], references: [id], onDelete: Cascade)
+  claimant      User                @relation("AlumniClaimant", fields: [claimantUserId], references: [id], onDelete: Cascade)
+  school        School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  reviewer      User?               @relation("AlumniClaimReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, status, createdAt])
+  @@index([archiveRecordId, status])
+  @@index([claimantUserId, status])
+}
+
+enum ArchiveRecordStatus {
+  LIVING
+  DECEASED
+  UNKNOWN
+}
+
+enum AlumniClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ============================================

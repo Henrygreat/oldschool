@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { signOut } from '@/lib/auth'
+import { currentSchoolAdministrator } from '@/lib/admin'
 
-export function MemberNav({ name }: { name: string }) {
+export async function MemberNav({ name }: { name: string }) {
+  const administrator = await currentSchoolAdministrator()
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -20,6 +22,7 @@ export function MemberNav({ name }: { name: string }) {
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/dashboard">Dashboard</Link>
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/directory">Directory</Link>
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/network">My Network</Link>}
+          {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/alumni">Alumni Archive</Link>}
           {name ? (
             <>
               <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/members/me">{name}</Link>

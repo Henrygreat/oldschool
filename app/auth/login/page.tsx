@@ -4,7 +4,7 @@ import { LoginForm } from '@/components/auth/login-form'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>
+  searchParams: Promise<{ registered?: string; callbackUrl?: string }>
 }) {
   const params = await searchParams
   return (
@@ -16,7 +16,7 @@ export default async function LoginPage({
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Log in to GCUOBA</h1>
           <p className="mt-3 text-slate-600">Reconnect with the Old Boys community.</p>
         </div>
-        <LoginForm registered={params.registered === '1'} />
+        <LoginForm callbackUrl={params.callbackUrl} registered={params.registered === '1'} />
       </section>
     </main>
   )

@@ -178,6 +178,25 @@ existing unique constraints. Requests for either direction of the same member
 pair are serialized with a PostgreSQL transaction-level advisory lock, so two
 members cannot create simultaneous independent requests.
 
+### Alumni archive, imports, and profile claims
+
+School administrators can manage historical alumni records at `/admin/alumni`,
+import `.csv` or `.xlsx` files, review probable duplicates before confirming an
+import, and manually approve or reject member profile claims. Legacy `.xls`
+files are not supported. Uploads are limited to 5 MiB and 1,000 data rows.
+Imports preserve source row numbers and are transactional; previewing an import
+does not write archive records. Unknown or deceased entries cannot be claimed
+until an administrator marks them living. Approved claims link an archive
+entry to a member without overwriting that member's profile.
+
+Historical entries are searchable in the member directory and by Set. Contact
+details, biographies, and remarks are restricted to school administrators and
+are not included in public archive results. The additive migration is
+`prisma/migrations/20261005220000_alumni_archive_claims`; apply it with
+`npx prisma migrate deploy` before deploying the feature. No new environment
+variables are required. Access is limited to active school administrators with
+the school or national administrator roles.
+
 ### Applying the Phase 2 migration
 
 The additive PostgreSQL migration is in

@@ -154,7 +154,16 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
   }
   const where: Prisma.UserWhereInput = { AND: conditions }
   const total = await prisma.user.count({ where })
-  const pages = Math.ceil(total / DIRECTORY_PAGE_SIZE)
+  const archiveWhere = filters.setYear !== null || filters.q
+    ? {
+        schoolId,
+        archivedAt: null,
+        ...(filters.setYear !== null ? { setYear: filters.setYear } : {}),
+        ...(filters.q ? { fullName: { contains: filters.q, mode: 'insensitive' as const } } : {}),
+      }
+    : null
+  const archiveTotal = archiveWhere ? await prisma.alumniArchiveRecord.count({ where: archiveWhere }) : 0
+  const pages = Math.ceil(Math.max(total, archiveTotal) / DIRECTORY_PAGE_SIZE)
   const page = Math.min(filters.page, Math.max(pages, 1))
   const [users, houses, cohorts] = await Promise.all([
     prisma.user.findMany({
@@ -268,5 +277,50 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       member.isFollowing = following.has(member.id)
     }
   }
-  return { members, total, houses, cohorts, pages, page }
+  let archiveRecords: DirectoryCardMember[] = []
+  if (archiveWhere) {
+    const archiveRows = await prisma.alumniArchiveRecord.findMany({
+      where: archiveWhere,
+      orderBy: [{ setYear: 'desc' }, { fullName: 'asc' }],
+      skip: (page - 1) * DIRECTORY_PAGE_SIZE,
+      take: DIRECTORY_PAGE_SIZE,
+      select: {
+        id: true,
+        fullName: true,
+        title: true,
+        setYear: true,
+        house: true,
+        profession: true,
+        status: true,
+        claimedByUserId: true,
+      },
+    })
+    archiveRecords = archiveRows.map((record) => {
+      const recordType = record.status === 'DECEASED'
+        ? 'memorial'
+        : record.claimedByUserId
+          ? 'registered'
+          : 'historical'
+      return {
+        id: record.id,
+        name: [record.title, record.fullName].filter(Boolean).join(' '),
+        nickname: null,
+        photoUrl: null,
+        setName: `Set of ${record.setYear}`,
+        houseName: record.house,
+        profession: record.profession,
+        company: null,
+        location: null,
+        verified: false,
+        recordType,
+        profileHref: record.claimedByUserId
+          ? `/members/${record.claimedByUserId}`
+          : `/archive/${record.id}`,
+        claimHref: record.status === 'LIVING' && !record.claimedByUserId
+          ? `/archive/${record.id}`
+          : null,
+      }
+    })
+  }
+  return { members, archiveRecords, total, houses, cohorts, pages, page }
 }

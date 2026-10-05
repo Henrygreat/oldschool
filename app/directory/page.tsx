@@ -105,6 +105,21 @@ export default async function DirectoryPage({
           )}
         </section>
       </div>
+      {result.archiveRecords.length > 0 && (
+        <section className="mt-10" aria-label="Historical alumni archive results">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wider text-[#9C0621]">From the archive</p>
+              <h2 className="mt-1 text-2xl font-bold">Historical Set records</h2>
+              <p className="mt-1 text-sm text-slate-600">These entries are not necessarily registered members. Archive contact details and remarks are not shown.</p>
+            </div>
+            {filters.setYear !== null && <Link className="text-sm font-bold text-[#9C0621] hover:underline" href={`/sets/${filters.setYear}`}>Explore Set of {filters.setYear}</Link>}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {result.archiveRecords.map((member) => <MemberCard key={member.id} member={member} />)}
+          </div>
+        </section>
+      )}
     </MemberPageLayout>
   )
 }

@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button'
 
 const initialState: FormState = {}
 
-export function LoginForm({ registered }: { registered: boolean }) {
+export function LoginForm({ registered, callbackUrl = '/dashboard' }: { registered: boolean; callbackUrl?: string }) {
   const [state, action, pending] = useActionState(loginAction, initialState)
 
   return (
     <form action={action} className="mt-8 space-y-5">
+      <input name="callbackUrl" type="hidden" value={callbackUrl} />
       {registered && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Your account is ready. Sign in to continue.</p>}
       {state.error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.error}</p>}
       <label className="block text-sm font-semibold text-slate-700">
@@ -26,7 +27,7 @@ export function LoginForm({ registered }: { registered: boolean }) {
         {pending ? 'Signing in…' : 'Log in'}
       </Button>
       <p className="text-center text-sm text-slate-600">
-        New to GCUOBA? <Link className="font-bold text-[#9C0621] hover:underline" href="/auth/register">Create an account</Link>
+        New to GCUOBA? <Link className="font-bold text-[#9C0621] hover:underline" href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Create an account</Link>
       </p>
     </form>
   )

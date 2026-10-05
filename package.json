@@ -20,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.52.0",
     "next": "15.5.27",
     "next-auth": "^5.0.0-beta.25",
@@ -42,5 +43,11 @@
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "postcss": "8.5.28",
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   }
 }

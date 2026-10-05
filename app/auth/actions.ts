@@ -10,15 +10,31 @@ import { z } from 'zod'
 
 export type FormState = { error?: string }
 
+function safeCallbackUrl(value: unknown) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+    return '/dashboard'
+  }
+  try {
+    const target = new URL(value, 'https://gcuoba.invalid')
+    return target.origin === 'https://gcuoba.invalid'
+      ? `${target.pathname}${target.search}${target.hash}`
+      : '/dashboard'
+  } catch {
+    return '/dashboard'
+  }
+}
+
 export async function loginAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const parsed = z
     .object({
       email: z.string().trim().email().max(254),
       password: z.string().min(8).max(128),
+      callbackUrl: z.string().max(2048).optional(),
     })
     .safeParse({
       email: formData.get('email'),
       password: formData.get('password'),
+      callbackUrl: formData.get('callbackUrl'),
     })
   if (!parsed.success) return { error: 'Enter a valid email and password.' }
 
@@ -26,7 +42,7 @@ export async function loginAction(_previous: FormState, formData: FormData): Pro
     await signIn('credentials', {
       email: parsed.data.email.toLowerCase(),
       password: parsed.data.password,
-      redirectTo: '/dashboard',
+      redirectTo: safeCallbackUrl(parsed.data.callbackUrl),
     })
   } catch (error) {
     if (error instanceof AuthError) {
@@ -44,12 +60,14 @@ export async function registerAction(_previous: FormState, formData: FormData): 
       surname: z.string().trim().min(1).max(80),
       email: z.string().trim().email().max(254),
       password: z.string().min(8).max(128),
+      callbackUrl: z.string().max(2048).optional(),
     })
     .safeParse({
       firstName: formData.get('firstName'),
       surname: formData.get('surname'),
       email: formData.get('email'),
       password: formData.get('password'),
+      callbackUrl: formData.get('callbackUrl'),
     })
   if (!parsed.success) return { error: 'Enter your name, a valid email, and a password of at least 8 characters.' }
 
@@ -83,5 +101,6 @@ export async function registerAction(_previous: FormState, formData: FormData): 
     throw error
   }
 
-  redirect('/auth/login?registered=1')
+  const callbackUrl = safeCallbackUrl(parsed.data.callbackUrl)
+  redirect(`/auth/login?registered=1&callbackUrl=${encodeURIComponent(callbackUrl)}`)
 }
