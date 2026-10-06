@@ -1,4 +1,4 @@
-﻿-- Phase 7: professional network, businesses, opportunities (additive only)
+-- Phase 7: professional network, businesses, opportunities (additive only)
 CREATE TYPE "BusinessStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'SUSPENDED');
 CREATE TYPE "BusinessMemberRole" AS ENUM ('OWNER', 'FOUNDER', 'CO_FOUNDER', 'DIRECTOR', 'PARTNER', 'EMPLOYEE');
 CREATE TYPE "OpportunityType" AS ENUM ('JOB', 'CONTRACT', 'INTERNSHIP', 'BUSINESS_OPPORTUNITY', 'PARTNERSHIP', 'VOLUNTEERING', 'MENTORSHIP', 'OTHER');
