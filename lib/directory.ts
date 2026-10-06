@@ -101,14 +101,30 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
             is: { profession: { contains: filters.q, mode: 'insensitive' } },
           },
         },
+        {
+          claimedArchiveRecord: {
+            is: {
+              archivedAt: null,
+              OR: [
+                { fullName: { contains: filters.q, mode: 'insensitive' } },
+                { profession: { contains: filters.q, mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
       ],
     })
   }
   if (filters.setYear !== null) {
     conditions.push({
-      alumniProfile: {
-        is: { schoolAttendance: { some: { cohort: { is: { year: filters.setYear } } } } },
-      },
+      OR: [
+        {
+          alumniProfile: {
+            is: { schoolAttendance: { some: { cohort: { is: { year: filters.setYear } } } } },
+          },
+        },
+        { claimedArchiveRecord: { is: { archivedAt: null, setYear: filters.setYear } } },
+      ],
     })
   }
   if (filters.entryYear !== null) {
@@ -123,13 +139,18 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
   }
   if (filters.house) {
     conditions.push({
-      alumniProfile: {
-        is: {
-          schoolAttendance: {
-            some: { house: { is: { name: { contains: filters.house, mode: 'insensitive' } } } },
+      OR: [
+        {
+          alumniProfile: {
+            is: {
+              schoolAttendance: {
+                some: { house: { is: { name: { contains: filters.house, mode: 'insensitive' } } } },
+              },
+            },
           },
         },
-      },
+        { claimedArchiveRecord: { is: { archivedAt: null, house: { contains: filters.house, mode: 'insensitive' } } } },
+      ],
     })
   }
   if (filters.country) {
@@ -140,9 +161,10 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
   }
   if (filters.profession) {
     conditions.push({
-      alumniProfile: {
-        is: { profession: { contains: filters.profession, mode: 'insensitive' } },
-      },
+      OR: [
+        { alumniProfile: { is: { profession: { contains: filters.profession, mode: 'insensitive' } } } },
+        { claimedArchiveRecord: { is: { archivedAt: null, profession: { contains: filters.profession, mode: 'insensitive' } } } },
+      ],
     })
   }
   if (filters.industry) {
@@ -153,19 +175,35 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
     })
   }
   const where: Prisma.UserWhereInput = { AND: conditions }
-  const total = await prisma.user.count({ where })
-  const archiveWhere = filters.setYear !== null || filters.q
-    ? {
-        schoolId,
-        archivedAt: null,
-        ...(filters.setYear !== null ? { setYear: filters.setYear } : {}),
-        ...(filters.q ? { fullName: { contains: filters.q, mode: 'insensitive' as const } } : {}),
-      }
-    : null
-  const archiveTotal = archiveWhere ? await prisma.alumniArchiveRecord.count({ where: archiveWhere }) : 0
+  const archiveSupportsFilters =
+    filters.entryYear === null &&
+    filters.leavingYear === null &&
+    !filters.country &&
+    !filters.city &&
+    !filters.industry
+  const archiveWhere: Prisma.AlumniArchiveRecordWhereInput = {
+    schoolId,
+    archivedAt: null,
+    claimedByUserId: null,
+    ...(filters.setYear !== null ? { setYear: filters.setYear } : {}),
+    ...(filters.house ? { house: { contains: filters.house, mode: 'insensitive' } } : {}),
+    ...(filters.profession ? { profession: { contains: filters.profession, mode: 'insensitive' } } : {}),
+    ...(filters.q
+      ? {
+          OR: [
+            { fullName: { contains: filters.q, mode: 'insensitive' } },
+            { profession: { contains: filters.q, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  }
+  const [total, archiveTotal] = await Promise.all([
+    prisma.user.count({ where }),
+    archiveSupportsFilters ? prisma.alumniArchiveRecord.count({ where: archiveWhere }) : Promise.resolve(0),
+  ])
   const pages = Math.ceil(Math.max(total, archiveTotal) / DIRECTORY_PAGE_SIZE)
   const page = Math.min(filters.page, Math.max(pages, 1))
-  const [users, houses, cohorts] = await Promise.all([
+  const [users, houses, cohorts, archiveRows, archiveHouses, archiveSetYears] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: [{ surname: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
@@ -191,10 +229,16 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
             jobTitle: true,
             verificationStatus: true,
             schoolAttendance: {
-              select: { cohort: { select: { name: true, year: true } } },
+              select: {
+                cohort: { select: { name: true, year: true } },
+                house: { select: { name: true } },
+              },
               take: 1,
             },
           },
+        },
+        claimedArchiveRecord: {
+          select: { setYear: true, house: true, profession: true },
         },
       },
     }),
@@ -209,7 +253,47 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       take: 100,
       select: { year: true, name: true },
     }),
+    archiveSupportsFilters
+      ? prisma.alumniArchiveRecord.findMany({
+          where: archiveWhere,
+          orderBy: [{ setYear: 'desc' }, { fullName: 'asc' }, { id: 'asc' }],
+          skip: (page - 1) * DIRECTORY_PAGE_SIZE,
+          take: DIRECTORY_PAGE_SIZE,
+          select: {
+            id: true,
+            fullName: true,
+            title: true,
+            setYear: true,
+            house: true,
+            profession: true,
+            status: true,
+          },
+        })
+      : Promise.resolve([]),
+    prisma.alumniArchiveRecord.findMany({
+      where: { schoolId, archivedAt: null, house: { not: null } },
+      distinct: ['house'],
+      orderBy: { house: 'asc' },
+      select: { house: true },
+    }),
+    prisma.alumniArchiveRecord.findMany({
+      where: { schoolId, archivedAt: null },
+      distinct: ['setYear'],
+      orderBy: { setYear: 'desc' },
+      select: { setYear: true },
+    }),
   ])
+  const allHouses = [
+    ...new Map(
+      [...houses, ...archiveHouses.flatMap(({ house }) => house ? [{ id: house, name: house }] : [])]
+        .map((house) => [house.name.toLocaleLowerCase(), house])
+    ).values(),
+  ].sort((left, right) => left.name.localeCompare(right.name))
+  const cohortByYear = new Map(cohorts.map((cohort) => [cohort.year, cohort]))
+  for (const { setYear } of archiveSetYears) {
+    if (!cohortByYear.has(setYear)) cohortByYear.set(setYear, { year: setYear, name: `Set of ${setYear}` })
+  }
+  const allCohorts = [...cohortByYear.values()].sort((left, right) => right.year - left.year)
 
   const members: DirectoryCardMember[] = users.map((user) => {
     const profile = user.alumniProfile
@@ -225,13 +309,15 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       photoUrl: canSeePhoto
         ? memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)
         : null,
-      setName: profile?.schoolAttendance[0]?.cohort?.name ?? null,
-      profession: profile?.profession ?? null,
+      setName: profile?.schoolAttendance[0]?.cohort?.name ??
+        (user.claimedArchiveRecord ? `Set of ${user.claimedArchiveRecord.setYear}` : null),
+      profession: profile?.profession ?? user.claimedArchiveRecord?.profession ?? null,
       company: canSeeCompany ? profile?.company ?? null : null,
       location: canSeeLocation
         ? [profile?.currentCity, profile?.currentCountry].filter(Boolean).join(', ') || null
         : null,
       verified: profile?.verificationStatus === 'VERIFIED',
+      houseName: profile?.schoolAttendance[0]?.house?.name ?? user.claimedArchiveRecord?.house ?? null,
       viewerId,
     }
   })
@@ -277,50 +363,28 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       member.isFollowing = following.has(member.id)
     }
   }
-  let archiveRecords: DirectoryCardMember[] = []
-  if (archiveWhere) {
-    const archiveRows = await prisma.alumniArchiveRecord.findMany({
-      where: archiveWhere,
-      orderBy: [{ setYear: 'desc' }, { fullName: 'asc' }],
-      skip: (page - 1) * DIRECTORY_PAGE_SIZE,
-      take: DIRECTORY_PAGE_SIZE,
-      select: {
-        id: true,
-        fullName: true,
-        title: true,
-        setYear: true,
-        house: true,
-        profession: true,
-        status: true,
-        claimedByUserId: true,
-      },
-    })
-    archiveRecords = archiveRows.map((record) => {
-      const recordType = record.status === 'DECEASED'
-        ? 'memorial'
-        : record.claimedByUserId
-          ? 'registered'
-          : 'historical'
-      return {
-        id: record.id,
-        name: [record.title, record.fullName].filter(Boolean).join(' '),
-        nickname: null,
-        photoUrl: null,
-        setName: `Set of ${record.setYear}`,
-        houseName: record.house,
-        profession: record.profession,
-        company: null,
-        location: null,
-        verified: false,
-        recordType,
-        profileHref: record.claimedByUserId
-          ? `/members/${record.claimedByUserId}`
-          : `/archive/${record.id}`,
-        claimHref: record.status === 'LIVING' && !record.claimedByUserId
-          ? `/archive/${record.id}`
-          : null,
-      }
-    })
+  const archiveRecords: DirectoryCardMember[] = archiveRows.map((record) => ({
+    id: record.id,
+    name: [record.title, record.fullName].filter(Boolean).join(' '),
+    nickname: null,
+    photoUrl: null,
+    setName: `Set of ${record.setYear}`,
+    houseName: record.house,
+    profession: record.profession,
+    company: null,
+    location: null,
+    verified: false,
+    recordType: record.status === 'DECEASED' ? 'memorial' : 'historical',
+    profileHref: `/archive/${record.id}`,
+    claimHref: record.status === 'LIVING' ? `/archive/${record.id}` : null,
+  }))
+  return {
+    members,
+    archiveRecords,
+    total: total + archiveTotal,
+    houses: allHouses,
+    cohorts: allCohorts,
+    pages,
+    page,
   }
-  return { members, archiveRecords, total, houses, cohorts, pages, page }
 }
