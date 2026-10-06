@@ -16,7 +16,7 @@ export default async function RegisterPage({
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Create your account</h1>
           <p className="mt-3 text-slate-600">Start reconnecting with the Old Boys of Government College Umuahia.</p>
         </div>
-        <RegisterForm callbackUrl={params.callbackUrl} />
+        <RegisterForm callbackUrl={params.callbackUrl ?? '/profile/edit?findOldSchoolRecord=1'} />
       </section>
     </main>
   )

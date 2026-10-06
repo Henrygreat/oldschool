@@ -59,11 +59,13 @@ export function ProfileEditor({
   houses,
   userId,
   initialPhotoUrl,
+  onboardingDiscovery = false,
 }: {
   initialValues: Draft
   houses: HouseOption[]
   userId: string
   initialPhotoUrl: string | null
+  onboardingDiscovery?: boolean
 }) {
   const router = useRouter()
   const [values, setValues] = useState(initialValues)
@@ -98,7 +100,7 @@ export function ProfileEditor({
     }
     setSaved(true)
     if (nextStep >= labels.length) {
-      router.push(`/members/${userId}`)
+      router.push(onboardingDiscovery ? '/archive/find?onboarding=1' : `/members/${userId}`)
       router.refresh()
       return
     }

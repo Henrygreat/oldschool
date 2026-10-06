@@ -24,13 +24,13 @@ export async function reviewAlumniClaim(
   try {
     const result = await prisma.$transaction(async (transaction) => {
       const claim = await transaction.alumniProfileClaim.findFirst({
-        where: { id: claimId, schoolId: admin.schoolId },
-        select: { id: true, archiveRecordId: true, status: true, claimantUserId: true },
+        where: { id: claimId, ...(admin.isGlobalAdministrator ? {} : { schoolId: admin.schoolId }) },
+        select: { id: true, archiveRecordId: true, schoolId: true, status: true, claimantUserId: true },
       })
       if (!claim || claim.status !== AlumniClaimStatus.PENDING) return 'NOT_PENDING'
       await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${claim.archiveRecordId}, 1))`
       const record = await transaction.alumniArchiveRecord.findFirst({
-        where: { id: claim.archiveRecordId, schoolId: admin.schoolId, archivedAt: null },
+        where: { id: claim.archiveRecordId, schoolId: claim.schoolId, archivedAt: null },
         select: { id: true, status: true, claimedByUserId: true },
       })
       if (!record) return 'NOT_AVAILABLE'
@@ -39,7 +39,7 @@ export async function reviewAlumniClaim(
         if (record.status !== ArchiveRecordStatus.LIVING) return 'NOT_LIVING'
         if (record.claimedByUserId && record.claimedByUserId !== claim.claimantUserId) return 'ALREADY_CLAIMED'
         const claimant = await transaction.user.findFirst({
-          where: { id: claim.claimantUserId, schoolId: admin.schoolId, isActive: true },
+          where: { id: claim.claimantUserId, schoolId: claim.schoolId, isActive: true },
           select: { id: true },
         })
         if (!claimant) return 'CLAIMANT_UNAVAILABLE'
@@ -61,6 +61,7 @@ export async function reviewAlumniClaim(
         await transaction.alumniProfileClaim.updateMany({
           where: {
             archiveRecordId: record.id,
+            schoolId: claim.schoolId,
             status: AlumniClaimStatus.PENDING,
             id: { not: claim.id },
           },

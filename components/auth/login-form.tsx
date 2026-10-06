@@ -27,7 +27,7 @@ export function LoginForm({ registered, callbackUrl = '/dashboard' }: { register
         {pending ? 'Signing in…' : 'Log in'}
       </Button>
       <p className="text-center text-sm text-slate-600">
-        New to GCUOBA? <Link className="font-bold text-[#9C0621] hover:underline" href={`/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Create an account</Link>
+        New to GCUOBA? <Link className="font-bold text-[#9C0621] hover:underline" href={callbackUrl === '/dashboard' ? '/auth/register' : `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Create an account</Link>
       </p>
     </form>
   )

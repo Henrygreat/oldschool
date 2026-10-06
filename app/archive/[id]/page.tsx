@@ -38,16 +38,27 @@ export default async function ArchiveRecordPage({
         select: { id: true, firstName: true },
       })
     : null
-  const pendingClaim = loggedInMember
+  const latestClaim = loggedInMember
     ? await prisma.alumniProfileClaim.findFirst({
         where: {
           archiveRecordId: record.id,
           claimantUserId: loggedInMember.id,
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: { status: true },
+      })
+    : null
+  const hasOtherPendingClaim = loggedInMember && !record.claimedByUserId
+    ? Boolean(await prisma.alumniProfileClaim.findFirst({
+        where: {
+          archiveRecordId: record.id,
+          schoolId: record.schoolId,
+          claimantUserId: { not: loggedInMember.id },
           status: 'PENDING',
         },
         select: { id: true },
-      })
-    : null
+      }))
+    : false
 
   return (
     <MemberPageLayout name={loggedInMember?.firstName ?? ''}>
@@ -69,12 +80,22 @@ export default async function ArchiveRecordPage({
           {record.house && <div><dt className="text-sm text-slate-500">House</dt><dd className="mt-1 font-semibold">{record.house}</dd></div>}
           {record.profession && <div><dt className="text-sm text-slate-500">Profession</dt><dd className="mt-1 font-semibold">{record.profession}</dd></div>}
         </dl>
-        {record.claimedByUserId && <Link className="mt-6 inline-flex rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-[#9C0621] hover:text-[#9C0621]" href={`/members/${record.claimedByUserId}`}>View registered member profile</Link>}
+        {record.claimedByUserId && (
+          <div className="mt-6">
+            {record.claimedByUserId === loggedInMember?.id && <p className="mb-3 text-sm font-semibold text-emerald-700">Claim approved. This historical record is linked to your member account.</p>}
+            <Link className="inline-flex rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-[#9C0621] hover:text-[#9C0621]" href={`/members/${record.claimedByUserId}`}>View registered member profile</Link>
+          </div>
+        )}
       </section>
 
       {record.status === 'LIVING' && !record.claimedByUserId && (
         <div className="mt-6">
-          <ClaimArchiveRecord archiveRecordId={record.id} loggedIn={Boolean(loggedInMember)} pending={Boolean(pendingClaim)} />
+          <ClaimArchiveRecord
+            archiveRecordId={record.id}
+            claimStatus={latestClaim?.status ?? null}
+            hasOtherPendingClaim={hasOtherPendingClaim}
+            loggedIn={Boolean(loggedInMember)}
+          />
         </div>
       )}
       <p className="mt-6 text-xs leading-5 text-slate-500">This historical entry does not display imported contact details, biographies, or remarks.</p>

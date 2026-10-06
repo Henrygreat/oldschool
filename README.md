@@ -189,6 +189,11 @@ does not write archive records. Unknown or deceased entries cannot be claimed
 until an administrator marks them living. Approved claims link an archive
 entry to a member without overwriting that member's profile.
 
+New members are offered an optional historical-record search after completing
+their profile; existing members can use the dashboard link or member directory.
+Possible matches require a member to submit a claim and are never linked
+automatically. Super administrators can review claims across schools.
+
 Historical entries are searchable in the member directory and by Set. Contact
 details, biographies, and remarks are restricted to school administrators and
 are not included in public archive results. The additive migration is

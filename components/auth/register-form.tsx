@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 
 const initialState: FormState = {}
 
-export function RegisterForm({ callbackUrl = '/dashboard' }: { callbackUrl?: string }) {
+export function RegisterForm({ callbackUrl = '/profile/edit?findOldSchoolRecord=1' }: { callbackUrl?: string }) {
   const [state, action, pending] = useActionState(registerAction, initialState)
 
   return (

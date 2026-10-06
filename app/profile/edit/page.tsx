@@ -5,7 +5,13 @@ import { auth } from '@/lib/auth'
 import { defaultPrivacy, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 
-export default async function EditProfilePage() {
+export default async function EditProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ findOldSchoolRecord?: string }>
+}) {
+  const params = await searchParams
+  const onboardingDiscovery = params.findOldSchoolRecord === '1'
   const session = await auth()
   if (!session?.user?.id || !session.user.schoolId) redirect('/auth/login')
 
@@ -97,6 +103,7 @@ export default async function EditProfilePage() {
           houses={houses}
           initialPhotoUrl={memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)}
           initialValues={initialValues}
+          onboardingDiscovery={onboardingDiscovery}
           userId={user.id}
         />
       </div>

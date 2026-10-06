@@ -33,8 +33,21 @@ export const currentSchoolAdministrator = cache(async () => {
       schoolId: session.user.schoolId,
       isActive: true,
     },
-    select: { id: true, schoolId: true, firstName: true, surname: true },
+    select: { id: true, schoolId: true, firstName: true, surname: true, role: true },
   })
-  if (!user || !(await isSchoolAdministrator(user.id, user.schoolId))) return null
-  return user
+  if (!user) return null
+  const assignment = user.role === AdminRole.SUPER_ADMIN
+    ? null
+    : await prisma.schoolAdministrator.findFirst({
+        where: { userId: user.id, schoolId: user.schoolId, role: { in: schoolAdminRoles } },
+        select: { role: true },
+      })
+  if (!schoolAdminRoles.includes(user.role) && !assignment) return null
+  return {
+    id: user.id,
+    schoolId: user.schoolId,
+    firstName: user.firstName,
+    surname: user.surname,
+    isGlobalAdministrator: user.role === AdminRole.SUPER_ADMIN || assignment?.role === AdminRole.SUPER_ADMIN,
+  }
 })

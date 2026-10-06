@@ -15,6 +15,23 @@ const tabs = [
 
 type View = (typeof tabs)[number]['id']
 
+function normalizedName(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLocaleLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+function compareValue(left: string | number | null | undefined, right: string | number | null | undefined) {
+  if (left === null || left === undefined || right === null || right === undefined || left === '' || right === '') {
+    return 'Unknown'
+  }
+  return String(left).toLocaleLowerCase() === String(right).toLocaleLowerCase() ? 'Match' : 'Different'
+}
+
 export default async function AlumniArchiveAdminPage({
   searchParams,
 }: {
@@ -33,7 +50,9 @@ export default async function AlumniArchiveAdminPage({
     prisma.alumniArchiveRecord.count({ where: { schoolId, archivedAt: null, claimedByUserId: { not: null } } }),
     prisma.alumniArchiveRecord.count({ where: { schoolId, archivedAt: null, claimedByUserId: null } }),
     prisma.alumniArchiveRecord.count({ where: { schoolId, archivedAt: null, status: 'DECEASED' } }),
-    prisma.alumniProfileClaim.count({ where: { schoolId, status: 'PENDING' } }),
+    prisma.alumniProfileClaim.count({
+      where: { ...(admin.isGlobalAdministrator ? {} : { schoolId }), status: 'PENDING' },
+    }),
   ])
 
   const recordWhere = {
@@ -70,7 +89,7 @@ export default async function AlumniArchiveAdminPage({
     view === 'records' ? prisma.alumniArchiveRecord.count({ where: recordWhere }) : Promise.resolve(0),
     view === 'claims'
       ? prisma.alumniProfileClaim.findMany({
-          where: { schoolId, status: 'PENDING' },
+          where: { ...(admin.isGlobalAdministrator ? {} : { schoolId }), status: 'PENDING' },
           orderBy: { createdAt: 'asc' },
           skip: (page - 1) * 20,
           take: 20,
@@ -78,7 +97,7 @@ export default async function AlumniArchiveAdminPage({
             id: true,
             claimantMessage: true,
             createdAt: true,
-            archiveRecord: { select: { id: true, fullName: true, setYear: true, house: true, email: true, phone: true } },
+            archiveRecord: { select: { id: true, fullName: true, firstName: true, middleName: true, surname: true, setYear: true, house: true, email: true, phone: true } },
             claimant: { select: { id: true, firstName: true, middleName: true, surname: true, email: true, alumniProfile: { select: { schoolAttendance: { take: 1, orderBy: { updatedAt: 'desc' }, select: { cohort: { select: { year: true } }, house: { select: { name: true } } } } } } } },
           },
         })
@@ -194,6 +213,14 @@ export default async function AlumniArchiveAdminPage({
         <section className="mt-6 space-y-4">
           {claims.map((claim) => {
             const userAttendance = claim.claimant.alumniProfile?.schoolAttendance[0]
+            const claimantName = [claim.claimant.firstName, claim.claimant.middleName, claim.claimant.surname].filter(Boolean).join(' ')
+            const archiveName = [claim.archiveRecord.firstName, claim.archiveRecord.middleName, claim.archiveRecord.surname]
+              .filter(Boolean)
+              .join(' ') || claim.archiveRecord.fullName
+            const claimantNameParts = new Set(normalizedName(claimantName).split(' '))
+            const archiveNameParts = new Set(normalizedName(archiveName).split(' '))
+            const similarName = normalizedName(claimantName) === normalizedName(archiveName) ||
+              [...claimantNameParts].filter((part) => archiveNameParts.has(part)).length >= Math.min(claimantNameParts.size, archiveNameParts.size)
             return (
               <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={claim.id}>
                 <div className="grid gap-5 lg:grid-cols-2">
@@ -202,10 +229,15 @@ export default async function AlumniArchiveAdminPage({
                     <h2 className="mt-1 text-lg font-bold">{claim.archiveRecord.fullName}</h2>
                     <p className="mt-1 text-sm text-slate-600">Set {claim.archiveRecord.setYear}{claim.archiveRecord.house ? ` · ${claim.archiveRecord.house} House` : ''}</p>
                     <p className="mt-1 text-sm text-slate-600">Archive email: {claim.archiveRecord.email ?? 'Not recorded'} · Phone: {claim.archiveRecord.phone ?? 'Not recorded'}</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-xs">
+                      <dt className="font-semibold text-slate-600">Name</dt><dd>{similarName ? 'Similar' : 'Different'}</dd>
+                      <dt className="font-semibold text-slate-600">Set/year</dt><dd>{compareValue(userAttendance?.cohort?.year, claim.archiveRecord.setYear)}</dd>
+                      <dt className="font-semibold text-slate-600">House</dt><dd>{compareValue(userAttendance?.house?.name, claim.archiveRecord.house)}</dd>
+                    </dl>
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Claiming user</p>
-                    <p className="mt-1 font-bold">{[claim.claimant.firstName, claim.claimant.middleName, claim.claimant.surname].filter(Boolean).join(' ')}</p>
+                    <p className="mt-1 font-bold">{claimantName}</p>
                     <p className="mt-1 text-sm text-slate-600">{claim.claimant.email}</p>
                     <p className="mt-1 text-sm text-slate-600">Account set: {userAttendance?.cohort?.year ?? 'Not provided'} · House: {userAttendance?.house?.name ?? 'Not provided'}</p>
                     <p className="mt-1 text-xs text-slate-500">Claim submitted {claim.createdAt.toISOString().slice(0, 10)}</p>
