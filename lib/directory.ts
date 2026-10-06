@@ -201,14 +201,20 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
     prisma.user.count({ where }),
     archiveSupportsFilters ? prisma.alumniArchiveRecord.count({ where: archiveWhere }) : Promise.resolve(0),
   ])
-  const pages = Math.ceil(Math.max(total, archiveTotal) / DIRECTORY_PAGE_SIZE)
+  const combinedTotal = total + archiveTotal
+  const pages = Math.ceil(combinedTotal / DIRECTORY_PAGE_SIZE)
   const page = Math.min(filters.page, Math.max(pages, 1))
+  const directoryOffset = (page - 1) * DIRECTORY_PAGE_SIZE
+  const userSkip = Math.min(directoryOffset, total)
+  const userTake = Math.min(DIRECTORY_PAGE_SIZE, total - userSkip)
+  const archiveSkip = Math.max(0, directoryOffset - total)
+  const archiveTake = Math.min(DIRECTORY_PAGE_SIZE - userTake, archiveTotal - archiveSkip)
   const [users, houses, cohorts, archiveRows, archiveHouses, archiveSetYears] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: [{ surname: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
-      skip: (page - 1) * DIRECTORY_PAGE_SIZE,
-      take: DIRECTORY_PAGE_SIZE,
+      skip: userSkip,
+      take: userTake,
       select: {
         id: true,
         firstName: true,
@@ -253,12 +259,12 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       take: 100,
       select: { year: true, name: true },
     }),
-    archiveSupportsFilters
+    archiveSupportsFilters && archiveTake > 0
       ? prisma.alumniArchiveRecord.findMany({
           where: archiveWhere,
           orderBy: [{ setYear: 'desc' }, { fullName: 'asc' }, { id: 'asc' }],
-          skip: (page - 1) * DIRECTORY_PAGE_SIZE,
-          take: DIRECTORY_PAGE_SIZE,
+          skip: archiveSkip,
+          take: archiveTake,
           select: {
             id: true,
             fullName: true,
@@ -381,7 +387,7 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
   return {
     members,
     archiveRecords,
-    total: total + archiveTotal,
+    total: combinedTotal,
     houses: allHouses,
     cohorts: allCohorts,
     pages,

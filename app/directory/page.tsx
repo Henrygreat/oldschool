@@ -82,14 +82,19 @@ export default async function DirectoryPage({
         <section aria-live="polite">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div><h2 className="text-xl font-bold">Old Boys</h2><p className="mt-1 text-sm text-slate-600">{result.total} {result.total === 1 ? 'directory entry' : 'directory entries'} found</p></div>
+            {filters.setYear !== null && <Link className="text-sm font-bold text-[#9C0621] hover:underline" href={`/sets/${filters.setYear}`}>Explore Set of {filters.setYear}</Link>}
             {filters.invalid && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">One or more year or page filters were invalid and have been ignored.</p>}
           </div>
-          {result.members.length || result.archiveRecords.length ? (
-            result.members.length > 0 ? (
+          {result.members.length > 0 || result.archiveRecords.length > 0 ? (
+            <>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {result.members.map((member) => <MemberCard key={member.id} member={member} />)}
+                {result.archiveRecords.map((member) => <MemberCard key={`archive-${member.id}`} member={member} />)}
               </div>
-            ) : null
+              {result.archiveRecords.length > 0 && (
+                <p className="mt-4 text-sm text-slate-600">Historical records are not necessarily registered members. Archive contact details and remarks are not shown.</p>
+              )}
+            </>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#9C0621]/10 text-[#9C0621]"><Search className="h-5 w-5" /></div>
@@ -107,21 +112,6 @@ export default async function DirectoryPage({
           )}
         </section>
       </div>
-      {result.archiveRecords.length > 0 && (
-        <section className="mt-10" aria-label="Historical alumni archive results">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-[#9C0621]">From the archive</p>
-              <h2 className="mt-1 text-2xl font-bold">Historical alumni records</h2>
-              <p className="mt-1 text-sm text-slate-600">These entries are not necessarily registered members. Archive contact details and remarks are not shown.</p>
-            </div>
-            {filters.setYear !== null && <Link className="text-sm font-bold text-[#9C0621] hover:underline" href={`/sets/${filters.setYear}`}>Explore Set of {filters.setYear}</Link>}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {result.archiveRecords.map((member) => <MemberCard key={member.id} member={member} />)}
-          </div>
-        </section>
-      )}
     </MemberPageLayout>
   )
 }
