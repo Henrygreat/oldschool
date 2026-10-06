@@ -82,17 +82,31 @@ export async function POST(request: Request) {
   }
 
   const sheet = workbook.worksheets[0]
-  if (!sheet || sheet.rowCount < 2 || sheet.columnCount === 0) {
+  if (!sheet) {
     return NextResponse.json({ error: 'The first sheet needs a header row and at least one data row.' }, { status: 400 })
   }
-  if (sheet.columnCount > maxColumns || sheet.rowCount - 1 > MAX_ARCHIVE_IMPORT_ROWS) {
+  const populatedRows: ExcelJS.Row[] = []
+  let columnCount = 0
+  sheet.eachRow((row) => {
+    populatedRows.push(row)
+    row.eachCell((cell, columnNumber) => {
+      if (cell.value !== null && cell.value !== undefined) {
+        columnCount = Math.max(columnCount, columnNumber)
+      }
+    })
+  })
+  const dataRowCount = populatedRows.filter((row) => row.number !== 1).length
+  if (populatedRows.length < 2 || columnCount === 0) {
+    return NextResponse.json({ error: 'The first sheet needs a header row and at least one data row.' }, { status: 400 })
+  }
+  if (columnCount > maxColumns || dataRowCount > MAX_ARCHIVE_IMPORT_ROWS) {
     return NextResponse.json({
       error: `The first sheet may contain at most ${maxColumns} columns and ${MAX_ARCHIVE_IMPORT_ROWS} data rows.`,
     }, { status: 413 })
   }
 
   try {
-    const headers = Array.from({ length: sheet.columnCount }, (_, index) =>
+    const headers = Array.from({ length: columnCount }, (_, index) =>
       cellText(sheet.getRow(1).getCell(index + 1)).trim().slice(0, 100)
     )
     if (headers.some((header) => !header)) {
@@ -101,9 +115,9 @@ export async function POST(request: Request) {
     const rows: string[][] = []
     const sourceRowNumbers: number[] = []
     let totalText = headers.reduce((sum, header) => sum + header.length, 0)
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
-      const row = sheet.getRow(rowNumber)
-      const values = Array.from({ length: sheet.columnCount }, (_, index) =>
+    for (const row of populatedRows) {
+      if (row.number === 1) continue
+      const values = Array.from({ length: columnCount }, (_, index) =>
         cellText(row.getCell(index + 1)).slice(0, 500)
       )
       if (values.every((value) => !value.trim())) continue
@@ -112,7 +126,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'The spreadsheet contains too much text to preview safely.' }, { status: 413 })
       }
       rows.push(values)
-      sourceRowNumbers.push(rowNumber)
+      sourceRowNumbers.push(row.number)
     }
     if (!rows.length) {
       return NextResponse.json({ error: 'The spreadsheet contains no data rows.' }, { status: 400 })
