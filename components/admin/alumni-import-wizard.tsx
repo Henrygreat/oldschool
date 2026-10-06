@@ -236,7 +236,7 @@ export function AlumniImportWizard() {
               type="file"
             />
           </label>
-          <p className="mt-2 text-xs text-slate-500">Maximum 5 MB and 1,000 data rows. Legacy .xls files are not supported. Formula cells and photo import are not supported.</p>
+          <p className="mt-2 text-xs text-slate-500">Maximum 5 MB and 10,000 data rows. Legacy .xls files are not supported. Formula cells and photo import are not supported.</p>
           <Button className="mt-4 gap-2 bg-[#9C0621] text-white hover:bg-[#80051b]" disabled={!file || busy} onClick={() => void parseFile()} type="button">
             <UploadCloud className="h-4 w-4" /> {busy ? 'Reading spreadsheet…' : 'Upload and map columns'}
           </Button>

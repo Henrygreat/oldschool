@@ -183,7 +183,7 @@ members cannot create simultaneous independent requests.
 School administrators can manage historical alumni records at `/admin/alumni`,
 import `.csv` or `.xlsx` files, review probable duplicates before confirming an
 import, and manually approve or reject member profile claims. Legacy `.xls`
-files are not supported. Uploads are limited to 5 MiB and 1,000 data rows.
+files are not supported. Uploads are limited to 5 MiB and 10,000 data rows.
 Imports preserve source row numbers and are transactional; previewing an import
 does not write archive records. Unknown or deceased entries cannot be claimed
 until an administrator marks them living. Approved claims link an archive

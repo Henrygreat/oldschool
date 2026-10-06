@@ -4,7 +4,7 @@ import { ArchiveRecordStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { archiveFieldNames, type ArchiveField } from '@/lib/archive-types'
 
-export const MAX_ARCHIVE_IMPORT_ROWS = 1000
+export const MAX_ARCHIVE_IMPORT_ROWS = 10_000
 export const MAX_ARCHIVE_TEXT_LENGTH = 500
 export type ArchiveInput = {
   fullName: string
