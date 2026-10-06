@@ -86,8 +86,30 @@ export function visibleProfileFilter(field: string, predicate: Prisma.AlumniProf
   }
 }
 
-export async function searchDirectory(schoolId: string, viewerId: string, filters: DirectoryFilters) {
+export async function searchDirectory(
+  schoolId: string,
+  viewerId: string,
+  filters: DirectoryFilters,
+  options: { requireVerifiedSetMembership?: boolean } = {}
+) {
   const conditions: Prisma.UserWhereInput[] = [{ schoolId, isActive: true }]
+  if (options.requireVerifiedSetMembership && filters.setYear !== null) {
+    conditions.push({
+      OR: [
+        {
+          alumniProfile: {
+            is: {
+              verificationStatus: 'VERIFIED',
+              schoolAttendance: {
+                some: { cohort: { is: { year: filters.setYear, schoolId } } },
+              },
+            },
+          },
+        },
+        { claimedArchiveRecord: { is: { archivedAt: null, setYear: filters.setYear } } },
+      ],
+    })
+  }
   if (filters.q) {
     conditions.push({
       OR: [
@@ -120,7 +142,10 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       OR: [
         {
           alumniProfile: {
-            is: { schoolAttendance: { some: { cohort: { is: { year: filters.setYear } } } } },
+            is: {
+              verificationStatus: 'VERIFIED',
+              schoolAttendance: { some: { cohort: { is: { year: filters.setYear } } } },
+            },
           },
         },
         { claimedArchiveRecord: { is: { archivedAt: null, setYear: filters.setYear } } },
@@ -315,7 +340,7 @@ export async function searchDirectory(schoolId: string, viewerId: string, filter
       photoUrl: canSeePhoto
         ? memberPhotoUrl(user.id, user.profilePhotoKey, user.profilePhotoUrl, user.updatedAt)
         : null,
-      setName: profile?.schoolAttendance[0]?.cohort?.name ??
+      setName: (profile?.verificationStatus === 'VERIFIED' ? profile.schoolAttendance[0]?.cohort?.name : null) ??
         (user.claimedArchiveRecord ? `Set of ${user.claimedArchiveRecord.setYear}` : null),
       profession: profile?.profession ?? user.claimedArchiveRecord?.profession ?? null,
       company: canSeeCompany ? profile?.company ?? null : null,

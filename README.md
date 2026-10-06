@@ -202,6 +202,39 @@ are not included in public archive results. The additive migration is
 variables are required. Access is limited to active school administrators with
 the school or national administrator roles.
 
+### Sets, Chapters, events, and announcements
+
+Authenticated members can browse `/sets`, `/chapters`, and `/events`. Set
+pages combine registered members with unclaimed historical archive entries;
+historical records are never made into accounts and expose no imported contact
+details or administrative remarks. Registered Set membership is based on
+verified school attendance, or an approved historical-record claim. Self-entered
+school years remain pending verification and do not grant access to private Set
+announcements or events.
+
+Chapter membership is opt-in. Members request to join a Chapter, an authorised
+Chapter administrator approves or declines the request, and members can leave.
+Chapter location is not used to enrol members automatically.
+
+The additive community migration
+`prisma/migrations/20261006110000_phase4_community` adds scoped Set/Chapter
+administrator assignments, Chapter join requests, announcements, events, and
+unique per-member event RSVPs. `SUPER_ADMIN`, `NATIONAL_ADMIN`, and
+`SCHOOL_ADMIN` can manage communities at their school scope. `SET_ADMIN` and
+`CHAPTER_ADMIN` require an assignment to the particular Set or Chapter; each
+mutation checks that scope on the server. Official announcements/events are
+published by authorised administrators only. Events support Going, Maybe, and
+Not going RSVPs, optional capacity and deadline, and UTC date/time entry.
+
+Run `npx prisma validate`, `npx prisma generate`, `npm run typecheck`,
+`npm run lint`, and `npm run build` before release. After reviewing and
+committing the code, configure the production `DATABASE_URL` and run
+`npx prisma migrate deploy` before deploying the application. Do not run
+`prisma migrate dev`, `prisma db push`, or `prisma migrate reset` against
+production. No new environment variables are required. Event banner uploads
+and payment/ticketing are not included; no event-specific media storage was
+added.
+
 ### Applying the Phase 2 migration
 
 The additive PostgreSQL migration is in
@@ -241,7 +274,7 @@ The schema includes comprehensive models for:
 - User, AlumniProfile
 
 ### School Structure
-- SchoolAttendance, AcademicYear, Cohort (Set), House, ClassGroup, Chapter
+- SchoolAttendance, AcademicYear, Cohort (Set), CohortAdministrator, House, ClassGroup, Chapter, ChapterMember, ChapterAdministrator, ChapterJoinRequest
 
 ### Professional
 - Employment, Education, Skill
@@ -252,8 +285,8 @@ The schema includes comprehensive models for:
 ### Messaging
 - Conversation, ConversationParticipant, Message
 
-### Admin
-- VerificationRequest, Notification, Invitation, Report, AuditLog, PrivacySetting
+### Community and Admin
+- Announcement, Event, EventRSVP, VerificationRequest, Notification, Invitation, Report, AuditLog, PrivacySetting
 
 ## Docker
 

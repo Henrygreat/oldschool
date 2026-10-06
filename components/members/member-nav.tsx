@@ -22,7 +22,11 @@ export async function MemberNav({ name }: { name: string }) {
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/dashboard">Dashboard</Link>
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/directory">Directory</Link>
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/network">My Network</Link>}
+          {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/sets">Sets</Link>}
+          {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/chapters">Chapters</Link>}
+          {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/events">Events</Link>}
           {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/alumni">Alumni Archive</Link>}
+          {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/community">Community Admin</Link>}
           {name ? (
             <>
               <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/members/me">{name}</Link>

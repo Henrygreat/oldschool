@@ -76,7 +76,12 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
           linkedInUrl: nullable(data.linkedInUrl),
           websiteUrl: nullable(data.websiteUrl),
         },
-        select: { id: true },
+        select: { id: true, verificationStatus: true },
+      })
+      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${profile.id}, 3))`
+      const currentProfile = await transaction.alumniProfile.findFirst({
+        where: { id: profile.id, userId: user.id, schoolId: session.user.schoolId },
+        select: { verificationStatus: true },
       })
 
       const set = data.setYear === null
@@ -96,8 +101,14 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
 
       const attendance = await transaction.schoolAttendance.findFirst({
         where: { alumniProfileId: profile.id, schoolId: session.user.schoolId },
-        select: { id: true },
+        select: { id: true, cohort: { select: { year: true } } },
       })
+      if (
+        (currentProfile?.verificationStatus === 'VERIFIED' || currentProfile?.verificationStatus === 'PENDING') &&
+        (attendance?.cohort?.year ?? null) !== data.setYear
+      ) {
+        throw new Error('PROFILE_SET_LOCKED')
+      }
       const attendanceData = {
         entryYear: data.entryYear,
         leavingYear: data.leavingYear,
@@ -140,6 +151,9 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
     }
     if (error instanceof Error && error.message === 'PROFILE_OWNER_NOT_FOUND') {
       return { ok: false, error: 'Your account is not available. Please sign in again.' }
+    }
+    if (error instanceof Error && error.message === 'PROFILE_SET_LOCKED') {
+      return { ok: false, error: 'Your Set is verified or awaiting review and cannot be changed until the school confirms an update.' }
     }
     throw error
   }

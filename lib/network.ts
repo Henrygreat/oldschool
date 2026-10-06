@@ -62,7 +62,7 @@ function memberCard(
     photoUrl: canSeePhoto
       ? memberPhotoUrl(member.id, member.profilePhotoKey, member.profilePhotoUrl, member.updatedAt)
       : null,
-    setName: attendance?.cohort?.name ?? null,
+    setName: profile?.verificationStatus === 'VERIFIED' ? attendance?.cohort?.name ?? null : null,
     houseName: attendance?.house?.name ?? null,
     profession: profile?.profession ?? null,
     company: canSeeCompany ? profile?.company ?? null : null,
@@ -277,6 +277,7 @@ async function getRecommendations(schoolId: string, userId: string): Promise<Dir
           industry: true,
           currentCity: true,
           currentCountry: true,
+          verificationStatus: true,
           schoolAttendance: {
             take: 1,
             orderBy: { updatedAt: 'desc' },
@@ -292,9 +293,14 @@ async function getRecommendations(schoolId: string, userId: string): Promise<Dir
   const chapterIds = profile?.chapterMemberships.map((membership) => membership.chapterId) ?? []
   const matches: Prisma.UserWhereInput[] = []
 
-  if (attendance?.cohortId) {
+  if (attendance?.cohortId && profile?.verificationStatus === 'VERIFIED') {
     matches.push({
-      alumniProfile: { is: { schoolAttendance: { some: { cohortId: attendance.cohortId } } } },
+      alumniProfile: {
+        is: {
+          verificationStatus: 'VERIFIED',
+          schoolAttendance: { some: { cohortId: attendance.cohortId } },
+        },
+      },
     })
   }
   if (attendance?.houseId) {
@@ -379,7 +385,12 @@ async function getRecommendations(schoolId: string, userId: string): Promise<Dir
     const candidateChapters = new Set(
       candidateProfile?.chapterMemberships.map((membership) => membership.chapterId) ?? []
     )
-    const sameSet = Boolean(attendance?.cohortId && candidateAttendance?.cohortId === attendance.cohortId)
+    const sameSet = Boolean(
+      profile?.verificationStatus === 'VERIFIED' &&
+      candidateProfile?.verificationStatus === 'VERIFIED' &&
+      attendance?.cohortId &&
+      candidateAttendance?.cohortId === attendance.cohortId
+    )
     const sameHouse = Boolean(attendance?.houseId && candidateAttendance?.houseId === attendance.houseId)
     const sharedChapter = chapterIds.some((chapterId) => candidateChapters.has(chapterId))
     const similarLocation = Boolean(

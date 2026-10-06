@@ -41,6 +41,9 @@ model School {
   houses               House[]
   classGroups          ClassGroup[]
   chapters             Chapter[]
+  announcements        Announcement[]
+  events               Event[]
+  chapterJoinRequests  ChapterJoinRequest[]
   posts                Post[]
   verifications        VerificationRequest[]
   invitations          Invitation[]
@@ -134,6 +137,13 @@ model User {
   triggeredNotifications   Notification[]            @relation("NotificationActor")
   reports                  Report[]
   privacySettings          PrivacySetting[]
+  administeredCohorts      CohortAdministrator[]
+  administeredChapters     ChapterAdministrator[]
+  authoredAnnouncements    Announcement[]          @relation("AnnouncementAuthor")
+  organizedEvents          Event[]                  @relation("EventOrganizer")
+  eventRSVPs               EventRSVP[]
+  chapterJoinRequests      ChapterJoinRequest[]     @relation("ChapterJoinRequester")
+  reviewedChapterRequests  ChapterJoinRequest[]     @relation("ChapterJoinReviewer")
 
   @@index([schoolId])
   @@index([email])
@@ -240,9 +250,25 @@ model Cohort {
   schoolAttendances    SchoolAttendance[]
   alumniArchiveRecords AlumniArchiveRecord[]
   posts                Post[]
+  administrators       CohortAdministrator[]
+  announcements        Announcement[]
+  events               Event[]
 
   @@unique([schoolId, year])
   @@index([schoolId])
+}
+
+model CohortAdministrator {
+  id        String   @id @default(cuid())
+  cohortId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  cohort Cohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cohortId, userId])
+  @@index([userId])
 }
 
 model House {
@@ -298,6 +324,10 @@ model Chapter {
 
   school  School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   members ChapterMember[]
+  administrators ChapterAdministrator[]
+  joinRequests ChapterJoinRequest[]
+  announcements Announcement[]
+  events Event[]
   posts   Post[]
 
   @@index([schoolId])
@@ -318,6 +348,150 @@ model ChapterMember {
   @@unique([chapterId, alumniProfileId])
   @@index([chapterId])
   @@index([alumniProfileId])
+}
+
+model ChapterAdministrator {
+  id        String   @id @default(cuid())
+  chapterId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, userId])
+  @@index([userId])
+}
+
+model ChapterJoinRequest {
+  id         String                 @id @default(cuid())
+  schoolId   String
+  chapterId  String
+  userId     String
+  status     ChapterJoinRequestStatus @default(PENDING)
+  message    String?
+  reviewerId String?
+  reviewedAt DateTime?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  chapter  Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user     User    @relation("ChapterJoinRequester", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("ChapterJoinReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@unique([chapterId, userId])
+  @@index([schoolId, status, createdAt])
+  @@index([chapterId, status])
+}
+
+enum ChapterJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Announcement {
+  id          String              @id @default(cuid())
+  schoolId    String
+  authorId    String
+  chapterId   String?
+  cohortId    String?
+  isNational  Boolean             @default(false)
+  title       String
+  content     String
+  status      CommunityContentStatus @default(DRAFT)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  author  User     @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  cohort  Cohort?  @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status, publishedAt])
+  @@index([chapterId, status, publishedAt])
+  @@index([cohortId, status, publishedAt])
+  @@index([isNational, status, publishedAt])
+}
+
+model Event {
+  id           String       @id @default(cuid())
+  schoolId     String
+  organizerId  String
+  chapterId    String?
+  cohortId     String?
+  isNational   Boolean      @default(false)
+  title        String
+  description  String?
+  eventType    EventType    @default(OTHER)
+  startAt      DateTime
+  endAt        DateTime?
+  location     String?
+  meetingUrl   String?
+  capacity     Int?
+  rsvpDeadline DateTime?
+  status       EventStatus  @default(DRAFT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  school    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  organizer User         @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  chapter   Chapter?     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  cohort    Cohort?      @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  rsvps     EventRSVP[]
+
+  @@index([schoolId, status, startAt])
+  @@index([chapterId, status, startAt])
+  @@index([cohortId, status, startAt])
+  @@index([isNational, status, startAt])
+}
+
+model EventRSVP {
+  id        String      @id @default(cuid())
+  eventId   String
+  userId    String
+  response  RSVPResponse
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, response])
+  @@index([userId])
+}
+
+enum CommunityContentStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum EventType {
+  ANNUAL_GENERAL_MEETING
+  FOUNDERS_DAY
+  REUNION
+  CHAPTER_MEETING
+  NETWORKING
+  DINNER
+  HOMECOMING
+  OTHER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum RSVPResponse {
+  GOING
+  MAYBE
+  NOT_GOING
 }
 
 // ============================================

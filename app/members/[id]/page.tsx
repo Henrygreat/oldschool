@@ -45,6 +45,7 @@ export default async function MemberProfilePage({
       profilePhotoUrl: true,
       profilePhotoKey: true,
       updatedAt: true,
+      claimedArchiveRecord: { select: { setYear: true } },
       privacySettings: { select: { field: true, visibility: true } },
       alumniProfile: {
         select: {
@@ -135,6 +136,8 @@ export default async function MemberProfilePage({
   const privacy = privacyFor(member.privacySettings)
   const profile = member.alumniProfile
   const attendance = profile?.schoolAttendance[0]
+  const visibleSetName = (profile?.verificationStatus === 'VERIFIED' ? attendance?.cohort?.name : null) ??
+    (member.claimedArchiveRecord ? `Set of ${member.claimedArchiveRecord.setYear}` : null)
   const canSeeEmail = canViewField(privacy.email, isMember, isOwner, isAdmin)
   const canSeePhone = canViewField(privacy.phone, isMember, isOwner, isAdmin)
   const canSeeLocation = canViewField(privacy.location, isMember, isOwner, isAdmin)
@@ -162,7 +165,7 @@ export default async function MemberProfilePage({
                 {profile?.verificationStatus === 'VERIFIED' && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><ShieldCheck className="h-3.5 w-3.5" /> Verified</span>}
               </div>
               {member.nickname && <p className="mt-1 text-slate-600">Known at GCU as “{member.nickname}”</p>}
-              <p className="mt-2 font-semibold text-[#9C0621]">{attendance?.cohort?.name ?? 'Government College Umuahia Old Boy'}</p>
+              <p className="mt-2 font-semibold text-[#9C0621]">{visibleSetName ?? (attendance?.cohort ? 'Set information awaiting verification' : 'Government College Umuahia Old Boy')}</p>
               {canSeeLocation && (profile?.currentCity || profile?.currentCountry) && <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600"><MapPin className="h-4 w-4" />{[profile.currentCity, profile.currentCountry].filter(Boolean).join(', ')}</p>}
             </div>
           </div>
@@ -184,7 +187,7 @@ export default async function MemberProfilePage({
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="flex items-center gap-2 text-lg font-bold"><GraduationCap className="h-5 w-5 text-[#9C0621]" /> GCU history</h2>
             <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div><dt className="text-sm text-slate-500">Set</dt><dd className="mt-1 font-semibold">{attendance?.cohort?.name ?? 'Not provided'}</dd></div>
+              <div><dt className="text-sm text-slate-500">Set</dt><dd className="mt-1 font-semibold">{visibleSetName ?? (attendance?.cohort ? (isOwner ? 'Awaiting school verification' : 'Not verified') : 'Not provided')}</dd></div>
               <div><dt className="text-sm text-slate-500">Entry and leaving years</dt><dd className="mt-1 font-semibold">{attendance?.entryYear ?? '—'} – {attendance?.leavingYear ?? '—'}</dd></div>
               <div><dt className="text-sm text-slate-500">House</dt><dd className="mt-1 font-semibold">{attendance?.house?.name ?? 'Not provided'}</dd></div>
               {isOwner && attendance?.studentNumber && <div><dt className="text-sm text-slate-500">Student number</dt><dd className="mt-1 font-semibold">{attendance.studentNumber}</dd></div>}
