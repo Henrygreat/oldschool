@@ -5,6 +5,7 @@ import { ArrowLeft, BriefcaseBusiness, ExternalLink, GraduationCap, MapPin, Penc
 import { Avatar } from '@/components/members/avatar'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { NetworkControls } from '@/components/members/network-controls'
+import { ProfessionalSections } from '@/components/professional/profile-sections'
 import { MessagingControls } from '@/components/messages/messaging-controls'
 import { ReportDisclosure } from '@/components/messages/report-form'
 import { auth } from '@/lib/auth'
@@ -229,6 +230,7 @@ export default async function MemberProfilePage({
               </dl>
             ) : <p className="mt-3 text-sm text-slate-500">Professional information has not been added.</p>}
           </section>
+          {isMember && <ProfessionalSections isOwner={isOwner} memberId={member.id} schoolId={member.schoolId} />}
         </div>
 
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

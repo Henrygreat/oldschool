@@ -52,6 +52,7 @@ export default async function ModerationReportsPage({
     <MemberPageLayout name={`${moderator.firstName} Moderator`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Reports queue</h1>
+        <Link className="text-sm font-semibold text-[#9C0621] hover:underline" href="/admin/professional">Business &amp; opportunity reports</Link>
         <nav className="flex gap-2 text-sm font-semibold">
           {['ALL', 'OPEN', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED'].map((option) => (
             <Link

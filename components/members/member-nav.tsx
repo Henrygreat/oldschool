@@ -39,6 +39,7 @@ export async function MemberNav({ name }: { name: string }) {
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/sets">Sets</Link>}
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/chapters">Chapters</Link>}
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/events">Events</Link>}
+          {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/professional">Professional</Link>}
           {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/alumni">Alumni Archive</Link>}
           {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/community">Community Admin</Link>}
           {moderator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/reports">Reports</Link>}

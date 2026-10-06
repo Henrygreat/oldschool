@@ -34,6 +34,8 @@ model School {
   users                User[]
   alumniProfiles       AlumniProfile[]
   alumniArchiveRecords AlumniArchiveRecord[]
+  businesses           Business[]
+  opportunities        Opportunity[]
   alumniImportBatches  AlumniImportBatch[]
   alumniClaims         AlumniProfileClaim[]
   academicYears        AcademicYear[]
@@ -136,16 +138,19 @@ model User {
   notifications            Notification[]            @relation("NotificationRecipient")
   triggeredNotifications   Notification[]            @relation("NotificationActor")
   reports                  Report[]
+  professionalProfile      ProfessionalProfile?
+  businessMemberships      BusinessMember[]
+  postedOpportunities      Opportunity[]
   privacySettings          PrivacySetting[]
   administeredCohorts      CohortAdministrator[]
   administeredChapters     ChapterAdministrator[]
-  authoredAnnouncements    Announcement[]          @relation("AnnouncementAuthor")
-  organizedEvents          Event[]                  @relation("EventOrganizer")
+  authoredAnnouncements    Announcement[]            @relation("AnnouncementAuthor")
+  organizedEvents          Event[]                   @relation("EventOrganizer")
   eventRSVPs               EventRSVP[]
-  chapterJoinRequests      ChapterJoinRequest[]     @relation("ChapterJoinRequester")
-  reviewedChapterRequests  ChapterJoinRequest[]     @relation("ChapterJoinReviewer")
-  reportsAgainst           Report[]                 @relation("ReportedUser")
-  reviewedReports          Report[]                 @relation("ReportReviewer")
+  chapterJoinRequests      ChapterJoinRequest[]      @relation("ChapterJoinRequester")
+  reviewedChapterRequests  ChapterJoinRequest[]      @relation("ChapterJoinReviewer")
+  reportsAgainst           Report[]                  @relation("ReportedUser")
+  reviewedReports          Report[]                  @relation("ReportReviewer")
 
   @@index([schoolId])
   @@index([email])
@@ -251,6 +256,8 @@ model Cohort {
   school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   schoolAttendances    SchoolAttendance[]
   alumniArchiveRecords AlumniArchiveRecord[]
+  businesses           Business[]
+  opportunities        Opportunity[]
   posts                Post[]
   administrators       CohortAdministrator[]
   announcements        Announcement[]
@@ -324,13 +331,13 @@ model Chapter {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  school  School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  members ChapterMember[]
+  school         School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  members        ChapterMember[]
   administrators ChapterAdministrator[]
-  joinRequests ChapterJoinRequest[]
-  announcements Announcement[]
-  events Event[]
-  posts   Post[]
+  joinRequests   ChapterJoinRequest[]
+  announcements  Announcement[]
+  events         Event[]
+  posts          Post[]
 
   @@index([schoolId])
   @@index([country])
@@ -366,7 +373,7 @@ model ChapterAdministrator {
 }
 
 model ChapterJoinRequest {
-  id         String                 @id @default(cuid())
+  id         String                   @id @default(cuid())
   schoolId   String
   chapterId  String
   userId     String
@@ -374,8 +381,8 @@ model ChapterJoinRequest {
   message    String?
   reviewerId String?
   reviewedAt DateTime?
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
 
   school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   chapter  Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
@@ -394,19 +401,19 @@ enum ChapterJoinRequestStatus {
 }
 
 model Announcement {
-  id          String              @id @default(cuid())
+  id          String                 @id @default(cuid())
   schoolId    String
   authorId    String
   chapterId   String?
   cohortId    String?
-  isNational  Boolean             @default(false)
+  isNational  Boolean                @default(false)
   title       String
   content     String
   status      CommunityContentStatus @default(DRAFT)
   publishedAt DateTime?
   expiresAt   DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
   school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   author  User     @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -420,29 +427,29 @@ model Announcement {
 }
 
 model Event {
-  id           String       @id @default(cuid())
+  id           String      @id @default(cuid())
   schoolId     String
   organizerId  String
   chapterId    String?
   cohortId     String?
-  isNational   Boolean      @default(false)
+  isNational   Boolean     @default(false)
   title        String
   description  String?
-  eventType    EventType    @default(OTHER)
+  eventType    EventType   @default(OTHER)
   startAt      DateTime
   endAt        DateTime?
   location     String?
   meetingUrl   String?
   capacity     Int?
   rsvpDeadline DateTime?
-  status       EventStatus  @default(DRAFT)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  status       EventStatus @default(DRAFT)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  school    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  organizer User         @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
-  chapter   Chapter?     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  cohort    Cohort?      @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  organizer User        @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  chapter   Chapter?    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  cohort    Cohort?     @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   rsvps     EventRSVP[]
 
   @@index([schoolId, status, startAt])
@@ -452,12 +459,12 @@ model Event {
 }
 
 model EventRSVP {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   eventId   String
   userId    String
   response  RSVPResponse
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -887,6 +894,8 @@ model Report {
   reporterId     String
   reportedUserId String?
   messageId      String?
+  businessId     String?
+  opportunityId  String?
   reason         String
   explanation    String?
   status         String    @default("PENDING")
@@ -894,17 +903,21 @@ model Report {
   reviewedAt     DateTime?
   createdAt      DateTime  @default(now())
 
-  post         Post?    @relation(fields: [postId], references: [id])
-  reporter     User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedUser User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
-  message      Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  reviewer     User?    @relation("ReportReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  post         Post?        @relation(fields: [postId], references: [id])
+  reporter     User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?        @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  business     Business?    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  reviewer     User?        @relation("ReportReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([postId])
   @@index([reporterId])
   @@index([status])
   @@index([reportedUserId, status])
   @@index([messageId])
+  @@index([businessId, status])
+  @@index([opportunityId, status])
 }
 
 // ============================================
@@ -954,4 +967,149 @@ enum VisibilityLevel {
   OLD_BOYS_ONLY
   CONNECTIONS_ONLY
   PRIVATE
+}
+
+// ============================================
+// PROFESSIONAL NETWORK (Phase 7)
+// ============================================
+
+enum BusinessStatus {
+  DRAFT
+  PUBLISHED
+  SUSPENDED
+}
+
+enum BusinessMemberRole {
+  OWNER
+  FOUNDER
+  CO_FOUNDER
+  DIRECTOR
+  PARTNER
+  EMPLOYEE
+}
+
+enum OpportunityType {
+  JOB
+  CONTRACT
+  INTERNSHIP
+  BUSINESS_OPPORTUNITY
+  PARTNERSHIP
+  VOLUNTEERING
+  MENTORSHIP
+  OTHER
+}
+
+enum OpportunityStatus {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+  CLOSED
+  SUSPENDED
+}
+
+enum WorkMode {
+  ON_SITE
+  HYBRID
+  REMOTE
+}
+
+model ProfessionalProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  schoolId            String
+  isListed            Boolean  @default(false)
+  openToOpportunities Boolean  @default(false)
+  availableToMentor   Boolean  @default(false)
+  lookingForMentor    Boolean  @default(false)
+  canHelpWith         String[]
+  needsHelpWith       String[]
+  mentoringAreas      String[]
+  yearsOfExperience   Int?
+  professionalSummary String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, isListed])
+  @@index([schoolId, isListed, availableToMentor])
+  @@index([schoolId, isListed, openToOpportunities])
+}
+
+model Business {
+  id               String         @id @default(cuid())
+  schoolId         String
+  slug             String         @unique
+  name             String
+  shortDescription String
+  description      String?
+  industry         String?
+  services         String[]
+  location         String?
+  country          String?
+  website          String?
+  publicEmail      String?
+  publicPhone      String?
+  linkedInUrl      String?
+  yearEstablished  Int?
+  status           BusinessStatus @default(DRAFT)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  school        School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  members       BusinessMember[]
+  opportunities Opportunity[]
+  reports       Report[]
+  cohort        Cohort?          @relation(fields: [cohortId], references: [id])
+  cohortId      String?
+
+  @@index([schoolId, status])
+  @@index([schoolId, status, name])
+}
+
+model BusinessMember {
+  id         String             @id @default(cuid())
+  businessId String
+  userId     String
+  role       BusinessMemberRole @default(EMPLOYEE)
+  createdAt  DateTime           @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model Opportunity {
+  id             String            @id @default(cuid())
+  schoolId       String
+  postedByUserId String
+  businessId     String?
+  type           OpportunityType
+  title          String
+  description    String
+  organisation   String?
+  location       String?
+  country        String?
+  workMode       WorkMode?
+  employmentType String?
+  applicationUrl String?
+  closingDate    DateTime?
+  expiresAt      DateTime?
+  status         OpportunityStatus @default(PUBLISHED)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  postedBy User      @relation(fields: [postedByUserId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  reports  Report[]
+  cohort   Cohort?   @relation(fields: [cohortId], references: [id])
+  cohortId String?
+
+  @@index([schoolId, status, createdAt])
+  @@index([schoolId, type, status])
+  @@index([postedByUserId])
+  @@index([businessId])
 }

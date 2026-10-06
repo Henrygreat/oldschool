@@ -4,6 +4,7 @@ import { ArrowRight, Archive, BriefcaseBusiness, GraduationCap, MessageCircle, S
 import { Avatar } from '@/components/members/avatar'
 import { MemberCard } from '@/components/members/member-card'
 import { MemberPageLayout } from '@/components/members/member-nav'
+import { DashboardProfessional } from '@/components/professional/dashboard-professional'
 import { auth } from '@/lib/auth'
 import { formatCommunityDate } from '@/lib/community'
 import { searchDirectory } from '@/lib/directory'
@@ -273,6 +274,8 @@ export default async function DashboardPage() {
           <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No messages yet. Visit a member&apos;s profile to say hello.</p>
         )}
       </section>
+
+      <DashboardProfessional schoolId={session.user.schoolId} userId={user.id} />
 
       <section className="mt-10">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
