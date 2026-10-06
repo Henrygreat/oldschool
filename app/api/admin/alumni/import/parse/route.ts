@@ -71,7 +71,13 @@ export async function POST(request: Request) {
     } else {
       await workbook.xlsx.load(bytes as never)
     }
-  } catch {
+  } catch (error) {
+    console.error('Could not open uploaded alumni spreadsheet.', {
+      error,
+      filename,
+      fileSize: file.size,
+      mimeType: file.type,
+    })
     return NextResponse.json({ error: 'The spreadsheet is malformed or cannot be opened.' }, { status: 400 })
   }
 
