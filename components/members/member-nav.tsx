@@ -1,9 +1,13 @@
 import Link from 'next/link'
 import { signOut } from '@/lib/auth'
-import { currentSchoolAdministrator } from '@/lib/admin'
+import { currentModerator, currentSchoolAdministrator } from '@/lib/admin'
+import { activeMessagingUser, totalUnreadMessages } from '@/lib/messaging'
 
 export async function MemberNav({ name }: { name: string }) {
   const administrator = await currentSchoolAdministrator()
+  const moderator = await currentModerator()
+  const messagingUser = name ? await activeMessagingUser() : null
+  const unreadMessages = messagingUser ? await totalUnreadMessages(messagingUser.id) : 0
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -22,11 +26,22 @@ export async function MemberNav({ name }: { name: string }) {
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/dashboard">Dashboard</Link>
           <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/directory">Directory</Link>
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/network">My Network</Link>}
+          {name && (
+            <Link className="relative font-medium text-slate-600 hover:text-[#9C0621]" href="/messages">
+              Messages
+              {unreadMessages > 0 && (
+                <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#9C0621] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </span>
+              )}
+            </Link>
+          )}
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/sets">Sets</Link>}
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/chapters">Chapters</Link>}
           {name && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/events">Events</Link>}
           {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/alumni">Alumni Archive</Link>}
           {administrator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/community">Community Admin</Link>}
+          {moderator && <Link className="font-medium text-slate-600 hover:text-[#9C0621]" href="/admin/reports">Reports</Link>}
           {name ? (
             <>
               <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/members/me">{name}</Link>

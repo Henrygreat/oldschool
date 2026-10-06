@@ -5,7 +5,10 @@ import { ArrowLeft, BriefcaseBusiness, ExternalLink, GraduationCap, MapPin, Penc
 import { Avatar } from '@/components/members/avatar'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { NetworkControls } from '@/components/members/network-controls'
+import { MessagingControls } from '@/components/messages/messaging-controls'
+import { ReportDisclosure } from '@/components/messages/report-form'
 import { auth } from '@/lib/auth'
+import { canMessage as canMessageUser } from '@/lib/messaging'
 import { canViewField, memberPhotoUrl, privacyFor } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 import type { ConnectionState } from '@/lib/network-types'
@@ -81,6 +84,9 @@ export default async function MemberProfilePage({
   const isMember = Boolean(session?.user?.id && session.user.schoolId === member.schoolId)
   let connectionState: ConnectionState = 'none'
   let isFollowing = false
+  let isBlockedByViewer = false
+  let isBlockedByOther = false
+  let messagingPermission: { allowed: boolean; reason?: string } = { allowed: false }
   if (isMember && !isOwner && session?.user?.id) {
     const [connections, follow] = await Promise.all([
       prisma.connection.findMany({
@@ -97,6 +103,13 @@ export default async function MemberProfilePage({
         select: { id: true },
       }),
     ])
+    isBlockedByViewer = connections.some(
+      (connection) => connection.status === ConnectionStatus.BLOCKED && connection.fromUserId === session.user.id
+    )
+    isBlockedByOther = connections.some(
+      (connection) => connection.status === ConnectionStatus.BLOCKED && connection.fromUserId === member.id
+    )
+    messagingPermission = await canMessageUser(session.user.id, member.id, session.user.schoolId ?? member.schoolId)
     if (connections.some((connection) => connection.status === ConnectionStatus.ACCEPTED)) {
       connectionState = 'connected'
     } else if (connections.some((connection) => connection.status === ConnectionStatus.BLOCKED)) {
@@ -170,11 +183,23 @@ export default async function MemberProfilePage({
             </div>
           </div>
           {isOwner && <Link className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#9C0621] px-4 py-3 text-sm font-bold text-white hover:bg-[#80051b]" href="/profile/edit"><Pencil className="h-4 w-4" /> Edit profile</Link>}
-          {isMember && !isOwner && <NetworkControls
-            initialConnectionState={connectionState}
-            initialFollowing={isFollowing}
-            targetUserId={member.id}
-          />}
+          {isMember && !isOwner && (
+            <div className="flex flex-col items-end gap-2">
+              <NetworkControls
+                initialConnectionState={connectionState}
+                initialFollowing={isFollowing}
+                targetUserId={member.id}
+              />
+              <MessagingControls
+                canMessage={messagingPermission.allowed}
+                isBlockedByOther={isBlockedByOther}
+                isBlockedByViewer={isBlockedByViewer}
+                messagingBlockedReason={messagingPermission.reason}
+                targetUserId={member.id}
+              />
+              <ReportDisclosure label="Report member" targetUserId={member.id} />
+            </div>
+          )}
         </div>
       </section>
 

@@ -251,6 +251,18 @@ export async function toggleFollow(targetUserId: string, follow: boolean): Promi
     if (!target) return failure('This member is not available in your school network.')
 
     if (follow) {
+      const blocked = await prisma.connection.findFirst({
+        where: {
+          status: ConnectionStatus.BLOCKED,
+          OR: [
+            { fromUserId: member.id, toUserId: target.id },
+            { fromUserId: target.id, toUserId: member.id },
+          ],
+        },
+        select: { id: true },
+      })
+      if (blocked) return failure('You cannot follow this member.')
+
       await prisma.follow.createMany({
         data: [{ followerId: member.id, followingId: target.id }],
         skipDuplicates: true,

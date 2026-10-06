@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowRight, Archive, BriefcaseBusiness, GraduationCap, Search, UserRound } from 'lucide-react'
+import { ArrowRight, Archive, BriefcaseBusiness, GraduationCap, MessageCircle, Search, UserRound } from 'lucide-react'
 import { Avatar } from '@/components/members/avatar'
 import { MemberCard } from '@/components/members/member-card'
 import { MemberPageLayout } from '@/components/members/member-nav'
 import { auth } from '@/lib/auth'
 import { formatCommunityDate } from '@/lib/community'
 import { searchDirectory } from '@/lib/directory'
+import { getConversationList, totalUnreadMessages } from '@/lib/messaging'
 import { memberPhotoUrl, profileCompletion } from '@/lib/profile'
 import { prisma } from '@/lib/prisma'
 
@@ -87,7 +88,7 @@ export default async function DashboardPage() {
     ? attendance?.cohort?.id
     : user.claimedArchiveRecord?.cohortId ?? undefined
   const now = new Date()
-  const [announcements, events, pendingConnectionCount, communityNotifications] = await Promise.all([
+  const [announcements, events, pendingConnectionCount, communityNotifications, unreadMessages, recentConversations] = await Promise.all([
     prisma.announcement.findMany({
       where: {
         schoolId: session.user.schoolId,
@@ -147,6 +148,8 @@ export default async function DashboardPage() {
       take: 3,
       select: { id: true, content: true, link: true, createdAt: true, isRead: true },
     }),
+    totalUnreadMessages(user.id),
+    getConversationList(user.id, 1),
   ])
   const displayName = `${user.firstName} ${user.surname}`
 
@@ -201,6 +204,7 @@ export default async function DashboardPage() {
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/directory"><span className="flex items-center gap-3"><Search className="h-5 w-5 text-[#9C0621]" />Find Old Boys</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/archive/find"><span className="flex items-center gap-3"><Archive className="h-5 w-5 text-[#9C0621]" />Find your old school record</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/network"><span className="flex items-center gap-3"><UserRound className="h-5 w-5 text-[#9C0621]" />My Network</span><ArrowRight className="h-4 w-4" /></Link>
+            <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/messages"><span className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-[#9C0621]" />Messages{unreadMessages ? ` (${unreadMessages})` : ''}</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/sets"><span>Browse Sets</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/chapters"><span>Find your Chapter</span><ArrowRight className="h-4 w-4" /></Link>
             <Link className="flex items-center justify-between rounded-xl bg-slate-50 p-4 font-semibold hover:bg-slate-100" href="/events"><span>Upcoming events</span><ArrowRight className="h-4 w-4" /></Link>
@@ -245,6 +249,30 @@ export default async function DashboardPage() {
           </ul>
         </section>
       )}
+
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div><p className="text-sm font-bold uppercase tracking-wider text-[#9C0621]">Stay in touch</p><h2 className="mt-1 text-xl font-bold">Recent messages{unreadMessages ? ` (${unreadMessages} unread)` : ''}</h2></div>
+          <Link className="text-sm font-bold text-[#9C0621] hover:underline" href="/messages">View all →</Link>
+        </div>
+        {recentConversations.items.length ? (
+          <ul className="mt-4 divide-y divide-slate-100">
+            {recentConversations.items.slice(0, 3).map((conversation) => (
+              <li className="py-3" key={conversation.id}>
+                <Link className="flex items-center justify-between gap-3" href={`/messages/${conversation.id}`}>
+                  <span>
+                    <span className="font-semibold">{conversation.otherUser?.name ?? 'Former member'}</span>
+                    {conversation.latestMessage && <span className="ml-2 text-sm text-slate-500">{conversation.latestMessage.content.slice(0, 60)}</span>}
+                  </span>
+                  {conversation.unreadCount > 0 && <span className="rounded-full bg-[#9C0621] px-2 py-0.5 text-xs font-bold text-white">{conversation.unreadCount}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No messages yet. Visit a member&apos;s profile to say hello.</p>
+        )}
+      </section>
 
       <section className="mt-10">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">

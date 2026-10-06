@@ -144,6 +144,8 @@ model User {
   eventRSVPs               EventRSVP[]
   chapterJoinRequests      ChapterJoinRequest[]     @relation("ChapterJoinRequester")
   reviewedChapterRequests  ChapterJoinRequest[]     @relation("ChapterJoinReviewer")
+  reportsAgainst           Report[]                 @relation("ReportedUser")
+  reviewedReports          Report[]                 @relation("ReportReviewer")
 
   @@index([schoolId])
   @@index([email])
@@ -798,10 +800,12 @@ model Message {
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reports      Report[]
 
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
+  @@index([conversationId, createdAt])
 }
 
 // ============================================
@@ -878,19 +882,29 @@ model Invitation {
 // ============================================
 
 model Report {
-  id         String   @id @default(cuid())
-  postId     String?
-  reporterId String
-  reason     String
-  status     String   @default("PENDING")
-  createdAt  DateTime @default(now())
+  id             String    @id @default(cuid())
+  postId         String?
+  reporterId     String
+  reportedUserId String?
+  messageId      String?
+  reason         String
+  explanation    String?
+  status         String    @default("PENDING")
+  reviewerId     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
 
-  post     Post? @relation(fields: [postId], references: [id])
-  reporter User  @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  post         Post?    @relation(fields: [postId], references: [id])
+  reporter     User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  message      Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reviewer     User?    @relation("ReportReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([postId])
   @@index([reporterId])
   @@index([status])
+  @@index([reportedUserId, status])
+  @@index([messageId])
 }
 
 // ============================================
