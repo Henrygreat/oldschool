@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_DESCRIPTION, SITE_FULL_NAME, SITE_URL } from "@/lib/seo";
 import {
   ArrowRight,
   CalendarDays,
@@ -57,6 +59,13 @@ const features = [
     href: "/chapters",
   },
 ];
+
+export const metadata: Metadata = {
+  title: { absolute: SITE_FULL_NAME },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: SITE_URL },
+  openGraph: { title: SITE_FULL_NAME, description: SITE_DESCRIPTION, url: SITE_URL, type: "website" },
+};
 
 export default function LandingPage() {
   return (
