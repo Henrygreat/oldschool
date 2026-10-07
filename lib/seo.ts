@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 
 export const SITE_URL = 'https://gcuobanetwork.org'
 export const SITE_NAME = 'GCUOBA Network'
@@ -24,4 +24,17 @@ export const noIndex: Metadata['robots'] = {
  */
 export function privateMetadata(title: string): Metadata {
   return { title, robots: noIndex, openGraph: { title, url: SITE_URL }, twitter: { title } }
+}
+
+/** Metadata for public, indexable pages with a fixed canonical path on the production domain. */
+export function publicPageMetadata(path: string, title: string, description: string): Metadata {
+  const url = canonicalUrl(path)
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: 'website', siteName: SITE_NAME, url, title, description, locale: 'en_NG' },
+    twitter: { card: 'summary', title, description },
+    robots: { index: true, follow: true },
+  }
 }
