@@ -11,9 +11,9 @@ import {
   Users,
   BriefcaseBusiness,
   Images,
-  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PublicMobileMenu } from "@/components/public-mobile-menu";
 
 const features = [
   {
@@ -162,9 +162,18 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            <button className="rounded-lg border border-white/20 p-2 lg:hidden">
-              <Menu className="h-5 w-5" />
-            </button>
+            <PublicMobileMenu
+              className="lg:hidden"
+              links={[
+                { href: "/directory", label: "Old Boys" },
+                { href: "/sets", label: "Find Your Set" },
+                { href: "/chapters", label: "Chapters" },
+                { href: "/events", label: "Events" },
+                { href: "/about", label: "About" },
+                { href: "/auth/login", label: "Log In" },
+                { href: "/auth/register", label: "Join GCUOBA" },
+              ]}
+            />
           </div>
         </header>
 

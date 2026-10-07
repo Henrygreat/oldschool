@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
+import { PublicMobileMenu } from '@/components/public-mobile-menu'
 
 const aboutLinks = [
   { href: '/about', label: 'About GCUOBA Network' },
@@ -19,7 +20,7 @@ const mainLinks = [
 export function AboutShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-white text-slate-950">
-      <header className="bg-[#100307] text-white">
+      <header className="relative z-30 bg-[#100307] text-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 lg:h-20 lg:px-8">
           <Link className="flex items-center gap-3" href="/">
             <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#9C0621] font-bold">G</span>
@@ -44,8 +45,9 @@ export function AboutShell({ children }: { children: ReactNode }) {
             </div>
           </nav>
           <div className="flex items-center gap-2">
-            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white" href="/auth/login">Log In</Link>
-            <Link className="rounded-lg bg-[#9C0621] px-4 py-2 text-sm font-semibold text-white hover:bg-[#80051b]" href="/auth/register">Join GCUOBA</Link>
+            <Link className="hidden rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white sm:block" href="/auth/login">Log In</Link>
+            <Link className="hidden rounded-lg bg-[#9C0621] px-4 py-2 text-sm font-semibold text-white hover:bg-[#80051b] sm:block" href="/auth/register">Join GCUOBA</Link>
+            <PublicMobileMenu className="lg:hidden" links={[...mainLinks, ...aboutLinks, { href: '/auth/login', label: 'Log In' }, { href: '/auth/register', label: 'Join GCUOBA' }]} />
           </div>
         </div>
         <nav aria-label="About section" className="border-t border-white/10">
