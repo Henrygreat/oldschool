@@ -99,27 +99,29 @@ enum AdminRole {
 // ============================================
 
 model User {
-  id              String    @id @default(cuid())
-  schoolId        String
-  email           String    @unique
-  emailVerified   DateTime?
-  password        String
-  firstName       String
-  middleName      String?
-  surname         String
-  formerSurname   String?
-  nickname        String?
-  profilePhotoUrl String?
-  profilePhotoKey String?
-  coverPhotoUrl   String?
-  role            AdminRole @default(MEMBER)
-  isActive        Boolean   @default(true)
-  lastLoginAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  schoolId          String
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String
+  passwordChangedAt DateTime?
+  firstName         String
+  middleName        String?
+  surname           String
+  formerSurname     String?
+  nickname          String?
+  profilePhotoUrl   String?
+  profilePhotoKey   String?
+  coverPhotoUrl     String?
+  role              AdminRole @default(MEMBER)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   school                   School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   alumniProfile            AlumniProfile?
+  passwordResetTokens      PasswordResetToken[]
   schoolAdministrator      SchoolAdministrator[]
   uploadedAlumniImports    AlumniImportBatch[]       @relation("AlumniImportUploader")
   claimedArchiveRecord     AlumniArchiveRecord?      @relation("ArchiveRecordClaimedBy")
@@ -1112,4 +1114,26 @@ model Opportunity {
   @@index([schoolId, type, status])
   @@index([postedByUserId])
   @@index([businessId])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }

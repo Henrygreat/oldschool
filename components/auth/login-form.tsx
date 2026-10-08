@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 
 const initialState: FormState = {}
 
-export function LoginForm({ registered, callbackUrl = '/dashboard' }: { registered: boolean; callbackUrl?: string }) {
+export function LoginForm({ registered, notice, callbackUrl = '/dashboard' }: { registered: boolean; notice?: string; callbackUrl?: string }) {
   const [state, action, pending] = useActionState(loginAction, initialState)
 
   return (
     <form action={action} className="mt-8 space-y-5">
       <input name="callbackUrl" type="hidden" value={callbackUrl} />
       {registered && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Your account is ready. Sign in to continue.</p>}
+      {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
       {state.error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.error}</p>}
       <label className="block text-sm font-semibold text-slate-700">
         Email address
@@ -23,6 +24,7 @@ export function LoginForm({ registered, callbackUrl = '/dashboard' }: { register
         Password
         <input autoComplete="current-password" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#9C0621] focus:ring-2 focus:ring-[#9C0621]/15" minLength={8} name="password" required type="password" />
       </label>
+      <p className="-mt-2 text-right text-sm"><Link className="font-semibold text-[#9C0621] hover:underline" href="/forgot-password">Forgot password?</Link></p>
       <Button className="h-12 w-full bg-[#9C0621] text-white hover:bg-[#80051b]" disabled={pending} type="submit">
         {pending ? 'Signing in…' : 'Log in'}
       </Button>

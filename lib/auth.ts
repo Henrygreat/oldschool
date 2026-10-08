@@ -51,6 +51,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.schoolId = user.schoolId
+        token.authAt = Math.floor(Date.now() / 1000)
+        return token
+      }
+      if (!token.id) return token
+
+      // Sessions issued before a password change or reset are no longer valid.
+      const account = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: { isActive: true, passwordChangedAt: true },
+      })
+      if (!account || !account.isActive) return null
+      if (account.passwordChangedAt) {
+        const issuedAt = Number(token.authAt ?? token.iat ?? 0)
+        if (issuedAt < Math.floor(account.passwordChangedAt.getTime() / 1000)) return null
       }
       return token
     },

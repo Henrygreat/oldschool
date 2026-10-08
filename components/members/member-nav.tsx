@@ -46,6 +46,7 @@ export async function MemberNav({ name }: { name: string }) {
           {name ? (
             <>
               <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/members/me">{name}</Link>
+              <Link className="hidden font-medium text-slate-600 hover:text-[#9C0621] sm:inline" href="/account/security">Security</Link>
               <form action={async () => {
                 'use server'
                 await signOut({ redirectTo: '/' })

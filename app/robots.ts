@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
           '/admin/', '/dashboard/', '/messages/', '/api/', '/auth/', '/members/', '/network/',
           '/profile/', '/directory/', '/archive/', '/sets/', '/chapters/', '/events/',
           '/professional/', '/businesses/', '/opportunities/',
+          '/forgot-password', '/reset-password', '/account/',
         ],
       },
     ],
