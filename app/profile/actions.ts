@@ -30,14 +30,17 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
     if (!house) return { ok: false, error: 'Choose a valid house.' }
   }
 
+  let stage = 'start'
   try {
     await prisma.$transaction(async (transaction) => {
+      stage = 'find-user'
       const user = await transaction.user.findFirst({
         where: { id: session.user.id, schoolId: session.user.schoolId, isActive: true },
         select: { id: true },
       })
       if (!user) throw new Error('PROFILE_OWNER_NOT_FOUND')
 
+      stage = 'update-user'
       await transaction.user.update({
         where: { id: user.id },
         data: {
@@ -48,6 +51,7 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
         },
       })
 
+      stage = 'upsert-profile'
       const profile = await transaction.alumniProfile.upsert({
         where: { userId: user.id },
         create: {
@@ -78,12 +82,14 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
         },
         select: { id: true, verificationStatus: true },
       })
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${profile.id}, 3))`
+      stage = 'lock-profile'
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${profile.id}, 3))`
       const currentProfile = await transaction.alumniProfile.findFirst({
         where: { id: profile.id, userId: user.id, schoolId: session.user.schoolId },
         select: { verificationStatus: true },
       })
 
+      stage = 'upsert-cohort'
       const set = data.setYear === null
         ? null
         : await transaction.cohort.upsert({
@@ -99,6 +105,7 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
             select: { id: true },
           })
 
+      stage = 'find-attendance'
       const attendance = await transaction.schoolAttendance.findFirst({
         where: { alumniProfileId: profile.id, schoolId: session.user.schoolId },
         select: { id: true, cohort: { select: { year: true } } },
@@ -118,6 +125,7 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
       }
       const hasAttendance = Object.values(attendanceData).some((value) => value !== null)
 
+      stage = 'save-attendance'
       if (attendance) {
         await transaction.schoolAttendance.update({
           where: { id: attendance.id },
@@ -133,6 +141,7 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
         })
       }
 
+      stage = 'save-privacy'
       await Promise.all(
         (Object.entries(data.privacy) as [keyof typeof data.privacy, VisibilityLevel][]).map(
           ([field, visibility]) =>
@@ -143,19 +152,22 @@ export async function saveProfile(input: unknown): Promise<SaveProfileResult> {
             })
         )
       )
-    })
+    }, { maxWait: 10_000, timeout: 20_000 })
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('Profile update failed.', error.code)
-      return { ok: false, error: 'Your profile could not be saved. Please try again.' }
-    }
     if (error instanceof Error && error.message === 'PROFILE_OWNER_NOT_FOUND') {
       return { ok: false, error: 'Your account is not available. Please sign in again.' }
     }
     if (error instanceof Error && error.message === 'PROFILE_SET_LOCKED') {
       return { ok: false, error: 'Your Set is verified or awaiting review and cannot be changed until the school confirms an update.' }
     }
-    throw error
+    // Prisma messages can embed submitted values, so only codes and metadata are logged.
+    console.error('Profile save failed', {
+      stage,
+      name: error instanceof Error ? error.name : typeof error,
+      code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
+      meta: error instanceof Prisma.PrismaClientKnownRequestError ? error.meta : undefined,
+    })
+    return { ok: false, error: 'Your profile could not be saved. Please try again.' }
   }
 
   revalidatePath('/dashboard')

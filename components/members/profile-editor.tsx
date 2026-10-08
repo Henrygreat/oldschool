@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Check, ImagePlus, Trash2 } from 'lucide-react'
 import { VisibilityLevel } from '@prisma/client'
@@ -79,6 +79,7 @@ export function ProfileEditor({
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const [photoNotice, setPhotoNotice] = useState('')
+  const submitting = useRef(false)
 
   useEffect(() => () => {
     if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
@@ -89,11 +90,35 @@ export function ProfileEditor({
     setSaved(false)
   }
 
+  function discardSelectedPhoto() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setPhotoError('')
+    setPhotoNotice('')
+  }
+
   async function save(nextStep: number) {
+    if (submitting.current) return
+    submitting.current = true
     setBusy(true)
     setError('')
+    try {
+      await saveAndAdvance(nextStep)
+    } catch {
+      setError('Your profile could not be saved. Please try again.')
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
+  }
+
+  async function saveAndAdvance(nextStep: number) {
+    if (photoFile && !(await uploadPhoto())) {
+      setError('Your selected photo could not be uploaded, so nothing was saved. Retry the upload or remove the selection.')
+      return
+    }
     const result = await saveProfile(values)
-    setBusy(false)
     if (!result.ok) {
       setError(result.error)
       return
@@ -126,8 +151,8 @@ export function ProfileEditor({
     setPhotoPreview(URL.createObjectURL(file))
   }
 
-  async function uploadPhoto() {
-    if (!photoFile) return
+  async function uploadPhoto(): Promise<boolean> {
+    if (!photoFile) return true
     setPhotoBusy(true)
     setPhotoError('')
     setPhotoNotice('')
@@ -138,16 +163,18 @@ export function ProfileEditor({
       const result = await response.json() as { photoUrl?: string; error?: string }
       if (!response.ok || !result.photoUrl) {
         setPhotoError(result.error ?? 'The photo could not be saved. Please try again.')
-        return
+        return false
       }
       if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
       setPhotoUrl(result.photoUrl)
       setPhotoFile(null)
       setPhotoPreview(null)
-      setPhotoNotice('Your profile photo has been updated.')
+      setPhotoNotice('Photo saved. Your new profile photo is now on your profile.')
       router.refresh()
+      return true
     } catch {
       setPhotoError('The photo could not be saved. Check your connection and try again.')
+      return false
     } finally {
       setPhotoBusy(false)
     }
@@ -220,12 +247,13 @@ export function ProfileEditor({
                     type="file"
                   />
                 </label>
-                {photoFile && <Button disabled={photoBusy} onClick={() => void uploadPhoto()} type="button">
-                  {photoBusy ? 'Uploading…' : 'Upload photo'}
+                {photoFile && <Button disabled={photoBusy || busy} onClick={() => void uploadPhoto()} type="button">
+                  {photoBusy ? 'Uploading photo…' : photoError ? 'Retry upload' : 'Upload photo'}
                 </Button>}
-                {(photoUrl || photoPreview) && <Button
+                {photoFile && <Button disabled={photoBusy || busy} onClick={discardSelectedPhoto} type="button" variant="outline">Cancel</Button>}
+                {photoUrl && !photoFile && <Button
                   className="gap-2"
-                  disabled={photoBusy}
+                  disabled={photoBusy || busy}
                   onClick={() => void removePhoto()}
                   type="button"
                   variant="outline"
@@ -233,6 +261,8 @@ export function ProfileEditor({
                   <Trash2 className="h-4 w-4" /> Remove
                 </Button>}
               </div>
+              {photoFile && !photoBusy && !photoError && <p className="mt-2 text-sm font-medium text-amber-700" role="status">Photo ready to upload. It is not saved yet. Click Upload photo, or Save and continue.</p>}
+              {photoBusy && <p className="mt-2 text-sm text-slate-600" role="status">Uploading photo…</p>}
               {photoError && <p className="mt-2 text-sm text-red-700" role="alert">{photoError}</p>}
               {photoNotice && <p className="mt-2 text-sm text-emerald-700" role="status">{photoNotice}</p>}
             </div>
