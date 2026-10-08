@@ -192,7 +192,7 @@ export async function setEventRSVP(formData: FormData) {
   }
 
   const result = await prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${eventId}, 1))`
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${eventId}, 1))`
     const event = await transaction.event.findFirst({
       where: { id: eventId, schoolId: actor.schoolId, status: EventStatus.PUBLISHED },
       select: {
@@ -333,7 +333,7 @@ export async function requestSetVerification(formData: FormData) {
   if (!attendance) fail(path, 'set-attendance-required')
 
   const requestStatus = await prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${alumniProfile.id}, 3))`
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${alumniProfile.id}, 3))`
     const profile = await transaction.alumniProfile.findFirst({
       where: { id: alumniProfile.id, userId: actor.id, schoolId: actor.schoolId },
       select: { verificationStatus: true },
@@ -401,7 +401,7 @@ export async function reviewSetVerification(formData: FormData) {
   if (!request) fail(path, 'verification-request-unavailable')
 
   const result = await prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${request.alumniProfileId}, 3))`
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${request.alumniProfileId}, 3))`
     const pending = await transaction.verificationRequest.findFirst({
       where: {
         id: request.id,
@@ -613,7 +613,7 @@ export async function assignScopedAdministrator(formData: FormData) {
     const returnTo = `/sets/${cohort.year}`
     if (operation === 'add') {
       await prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
         const currentTarget = await transaction.user.findFirst({
           where: { id: target.id, schoolId: actor.schoolId, isActive: true },
           select: { role: true },
@@ -632,7 +632,7 @@ export async function assignScopedAdministrator(formData: FormData) {
       })
     } else {
       await prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
         await transaction.cohortAdministrator.deleteMany({
           where: { cohortId: cohort.id, userId: target.id },
         })
@@ -659,7 +659,7 @@ export async function assignScopedAdministrator(formData: FormData) {
     const returnTo = `/chapters/${encodeURIComponent(chapter.id)}`
     if (operation === 'add') {
       await prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
         const currentTarget = await transaction.user.findFirst({
           where: { id: target.id, schoolId: actor.schoolId, isActive: true },
           select: { role: true },
@@ -678,7 +678,7 @@ export async function assignScopedAdministrator(formData: FormData) {
       })
     } else {
       await prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${target.id}, 2))`
         await transaction.chapterAdministrator.deleteMany({
           where: { chapterId: chapter.id, userId: target.id },
         })

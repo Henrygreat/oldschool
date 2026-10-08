@@ -22,7 +22,7 @@ async function lockMemberPair(
   secondUserId: string
 ) {
   const pair = [firstUserId, secondUserId].sort().join(':')
-  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, 0))`
+  await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, 0))`
 }
 
 async function activeTarget(userId: string, schoolId: string) {
@@ -41,6 +41,16 @@ function refreshNetworkPaths(targetUserId: string) {
   revalidatePath('/directory')
   revalidatePath('/dashboard')
   revalidatePath(`/members/${targetUserId}`)
+}
+
+function logFailure(action: string, error: unknown) {
+  // Only codes and metadata are logged; Prisma messages can contain user data.
+  console.error('Network action failed', {
+    action,
+    name: error instanceof Error ? error.name : typeof error,
+    code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
+    meta: error instanceof Prisma.PrismaClientKnownRequestError ? error.meta : undefined,
+  })
 }
 
 function failure(error: string): NetworkActionResult {
@@ -125,7 +135,7 @@ export async function sendConnectionRequest(targetUserId: string): Promise<Netwo
       if (error.message === 'CONNECTION_UNAVAILABLE') return failure('A connection cannot be requested for this member.')
       if (error.message === 'CONNECTION_REQUEST_PENDING') return failure('A connection request is already pending.')
     }
-    console.error('Could not send a connection request.')
+    logFailure('sendConnectionRequest', error)
     return failure('The connection request could not be sent. Please try again.')
   }
 }
@@ -174,8 +184,8 @@ export async function respondToConnectionRequest(
     if (!changed) return failure('This request is no longer pending.')
     refreshNetworkPaths(sender.id)
     return { ok: true }
-  } catch {
-    console.error('Could not respond to a connection request.')
+  } catch (error) {
+    logFailure('respondToConnectionRequest', error)
     return failure('Your response could not be saved. Please try again.')
   }
 }
@@ -202,8 +212,8 @@ export async function cancelConnectionRequest(targetUserId: string): Promise<Net
     if (!changed) return failure('This request is no longer pending.')
     refreshNetworkPaths(targetUserId)
     return { ok: true }
-  } catch {
-    console.error('Could not cancel a connection request.')
+  } catch (error) {
+    logFailure('cancelConnectionRequest', error)
     return failure('The request could not be cancelled. Please try again.')
   }
 }
@@ -233,8 +243,8 @@ export async function removeConnection(targetUserId: string): Promise<NetworkAct
     if (!changed) return failure('You are not connected to this member.')
     refreshNetworkPaths(target.id)
     return { ok: true }
-  } catch {
-    console.error('Could not remove a connection.')
+  } catch (error) {
+    logFailure('Could not remove a connection.', error)
     return failure('The connection could not be removed. Please try again.')
   }
 }
@@ -274,8 +284,8 @@ export async function toggleFollow(targetUserId: string, follow: boolean): Promi
     }
     refreshNetworkPaths(target.id)
     return { ok: true }
-  } catch {
-    console.error('Could not update a member follow.')
+  } catch (error) {
+    logFailure('Could not update a member follow.', error)
     return failure('Your follow preference could not be saved. Please try again.')
   }
 }
@@ -295,8 +305,8 @@ export async function markNetworkingActivityRead(): Promise<NetworkActionResult>
     })
     revalidatePath('/network')
     return { ok: true }
-  } catch {
-    console.error('Could not mark networking notifications as read.')
+  } catch (error) {
+    logFailure('Could not mark networking notifications as read.', error)
     return failure('Notifications could not be updated. Please try again.')
   }
 }

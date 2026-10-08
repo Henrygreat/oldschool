@@ -31,7 +31,7 @@ async function lockUserPair(
   secondUserId: string
 ) {
   const pair = [firstUserId, secondUserId].sort().join(':')
-  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, 5))`
+  await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, 5))`
 }
 
 /** Starts (or reuses) a direct conversation with the target member and redirects there. */

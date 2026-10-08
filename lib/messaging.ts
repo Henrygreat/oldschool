@@ -27,7 +27,7 @@ async function lockUserPair(
   namespace: number
 ) {
   const pair = [firstUserId, secondUserId].sort().join(':')
-  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, ${namespace}))`
+  await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${pair}, ${namespace}))`
 }
 
 /** Returns the id of the user who blocked the other, if a block exists between the pair. */

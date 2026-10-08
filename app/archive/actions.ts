@@ -26,7 +26,7 @@ export async function submitArchiveClaim(
 
   try {
     const result = await prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${archiveRecordId}, 1))`
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${archiveRecordId}, 1))`
       const record = await transaction.alumniArchiveRecord.findFirst({
         where: {
           id: archiveRecordId,

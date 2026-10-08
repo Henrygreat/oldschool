@@ -28,7 +28,7 @@ export async function reviewAlumniClaim(
         select: { id: true, archiveRecordId: true, schoolId: true, status: true, claimantUserId: true },
       })
       if (!claim || claim.status !== AlumniClaimStatus.PENDING) return 'NOT_PENDING'
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${claim.archiveRecordId}, 1))`
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${claim.archiveRecordId}, 1))`
       const record = await transaction.alumniArchiveRecord.findFirst({
         where: { id: claim.archiveRecordId, schoolId: claim.schoolId, archivedAt: null },
         select: { id: true, status: true, claimedByUserId: true },
